@@ -1,0 +1,214 @@
+version: "1.0"
+namespace: wippy.session.process
+
+entries:
+  # wippy.session.process:consts
+  - name: consts
+    kind: library.lua
+    meta:
+      comment: System-wide constants and error messages
+      depends_on:
+        - ns:wippy
+        - ns:wippy.session
+        - ns:wippy.session.persist
+        - ns:wippy.llm
+        - ns:wippy.agent.gen1
+    source: file://consts.lua
+    
+  # wippy.session.process:controller
+  - name: controller
+    kind: library.lua
+    meta:
+      comment: Conversation controller for handling message processing and agent interactions
+      depends_on:
+        - ns:wippy
+        - ns:wippy.session
+        - ns:wippy.session.persist
+        - ns:wippy.llm
+        - ns:wippy.agent.gen1
+    source: file://controller.lua
+    modules:
+      - json
+      - uuid
+      - funcs
+    imports:
+      tools: wippy.llm:tools
+      agent_registry: wippy.agent.gen1:registry
+      agent_runner: wippy.agent.gen1:agent
+      consts: wippy.session.process:consts
+      prompt_builder: wippy.session.process:prompt_builder
+      queue: wippy.session.process:queue
+      tool_caller: wippy.session.process:tool_caller
+      tool_handler: wippy.session.process:tool_handler
+    
+  # wippy.session.process:loader
+  - name: loader
+    kind: library.lua
+    meta:
+      comment: Session state loader for initializing and loading session states
+      depends_on:
+        - ns:wippy
+        - ns:wippy.session
+        - ns:wippy.session.persist
+        - ns:wippy.llm
+        - ns:wippy.agent.gen1
+    source: file://loader.lua
+    modules:
+      - time
+      - json
+      - uuid
+    imports:
+      context_repo: wippy.session.persist:context_repo
+      message_repo: wippy.session.persist:message_repo
+      session_repo: wippy.session.persist:session_repo
+      start_tokens: wippy.session:start_tokens
+    
+  # wippy.session.process:prompt_builder
+  - name: prompt_builder
+    kind: library.lua
+    meta:
+      comment: update
+      depends_on:
+        - ns:wippy
+        - ns:wippy.session
+        - ns:wippy.session.persist
+        - ns:wippy.llm
+        - ns:wippy.agent.gen1
+    source: file://prompt_builder.lua
+    modules:
+      - json
+      - time
+    imports:
+      prompt: wippy.llm:prompt
+      upload_repo: wippy.uploads:upload_repo
+    
+  # wippy.session.process:queue
+  - name: queue
+    kind: library.lua
+    meta:
+      comment: Simple queue implementation for task management
+      depends_on:
+        - ns:wippy
+        - ns:wippy.session
+        - ns:wippy.session.persist
+        - ns:wippy.llm
+        - ns:wippy.agent.gen1
+    source: file://queue.lua
+    
+  # wippy.session.process:session
+  - name: session
+    kind: process.lua
+    meta:
+      comment: Minimalistic session process for message handling
+      depends_on:
+        - ns:wippy
+        - ns:wippy.session
+        - ns:wippy.session.persist
+        - ns:wippy.llm
+        - ns:wippy.agent.gen1
+      default_host: app:processes
+    source: file://session.lua
+    modules:
+      - time
+      - json
+    imports:
+      actor: wippy.actor:actor
+      consts: wippy.session.process:consts
+      controller: wippy.session.process:controller
+      loader: wippy.session.process:loader
+      session_context: wippy.session.process:session_context
+      session_state: wippy.session.process:session_state
+      session_upstream: wippy.session.process:session_upstream
+    method: run
+    
+  # wippy.session.process:session_context
+  - name: session_context
+    kind: library.lua
+    meta:
+      comment: Context manager for session data
+      depends_on:
+        - ns:wippy
+        - ns:wippy.session
+        - ns:wippy.session.persist
+        - ns:wippy.llm
+        - ns:wippy.agent.gen1
+    source: file://session_context.lua
+    modules:
+      - json
+    imports:
+      context_repo: wippy.session.persist:context_repo
+    
+  # wippy.session.process:session_state
+  - name: session_state
+    kind: library.lua
+    meta:
+      comment: Session state management for handling conversation history and state persistence
+      depends_on:
+        - ns:wippy
+        - ns:wippy.session
+        - ns:wippy.session.persist
+        - ns:wippy.llm
+        - ns:wippy.agent.gen1
+    source: file://session_state.lua
+    modules:
+      - uuid
+      - json
+    imports:
+      consts: wippy.session.process:consts
+      message_repo: wippy.session.persist:message_repo
+      session_contexts_repo: wippy.session.persist:session_contexts_repo
+      session_repo: wippy.session.persist:session_repo
+    
+  # wippy.session.process:session_upstream
+  - name: session_upstream
+    kind: library.lua
+    meta:
+      comment: Session upstream for sending notifications and updates to clients
+      depends_on:
+        - ns:wippy
+        - ns:wippy.session
+        - ns:wippy.session.persist
+        - ns:wippy.llm
+        - ns:wippy.agent.gen1
+    source: file://session_upstream.lua
+    modules:
+      - time
+    imports: {}
+    
+  # wippy.session.process:tool_caller
+  - name: tool_caller
+    kind: library.lua
+    meta:
+      comment: Tool execution and validation handler
+      depends_on:
+        - ns:wippy
+        - ns:wippy.session
+        - ns:wippy.session.persist
+        - ns:wippy.llm
+        - ns:wippy.agent.gen1
+    source: file://tool_caller.lua
+    modules:
+      - json
+      - uuid
+      - funcs
+    imports:
+      tools: wippy.llm:tools
+    
+  # wippy.session.process:tool_handler
+  - name: tool_handler
+    kind: library.lua
+    meta:
+      comment: Separate module for handling tool results and artifacts
+      depends_on:
+        - ns:wippy
+        - ns:wippy.session
+        - ns:wippy.session.persist
+        - ns:wippy.llm
+        - ns:wippy.agent.gen1
+    source: file://tool_handler.lua
+    modules:
+      - json
+      - uuid
+    imports:
+      artifact_repo: wippy.session.persist:artifact_repo
+    

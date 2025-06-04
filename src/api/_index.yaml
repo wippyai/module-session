@@ -1,0 +1,182 @@
+version: "1.0"
+namespace: wippy.session.api
+
+entries:
+  # wippy.session.api:get_artifact
+  - name: get_artifact
+    kind: function.lua
+    meta:
+      comment: Returns metadata for an artifact by ID
+      depends_on:
+        - ns:app
+        - ns:wippy.session.persist
+      router: app:api
+    source: file://get_artifact.lua
+    modules:
+      - http
+      - json
+      - security
+    imports:
+      artifact_repo: wippy.session.persist:artifact_repo
+      session_repo: wippy.session.persist:session_repo
+    method: handler
+    pool:
+      size: 2
+    
+  # wippy.session.api:get_artifact.endpoint
+  - name: get_artifact.endpoint
+    kind: http.endpoint
+    meta:
+      comment: Endpoint that returns metadata for an artifact
+      depends_on:
+        - ns:app
+      router: app:api
+    method: GET
+    func: get_artifact
+    path: /artifact/{id}
+    
+  # wippy.session.api:get_artifact_content
+  - name: get_artifact_content
+    kind: function.lua
+    meta:
+      comment: Returns content for an artifact by ID
+      depends_on:
+        - ns:app
+        - ns:wippy.session.persist
+      router: app:api
+    source: file://get_artifact_content.lua
+    modules:
+      - http
+      - json
+      - security
+    imports:
+      artifact_repo: wippy.session.persist:artifact_repo
+      renderer: wippy.views:renderer
+      session_repo: wippy.session.persist:session_repo
+    method: handler
+    pool:
+      size: 2
+    
+  # wippy.session.api:get_artifact_content.endpoint
+  - name: get_artifact_content.endpoint
+    kind: http.endpoint
+    meta:
+      comment: Endpoint that returns content for an artifact
+      depends_on:
+        - ns:app
+      router: app:api
+    method: GET
+    func: get_artifact_content
+    path: /artifact/{id}/content
+    
+  # wippy.session.api:get_session
+  - name: get_session
+    kind: function.lua
+    meta:
+      comment: Get detailed session info
+      description: Session management HTTP endpoints
+      depends_on:
+        - app:api
+        - ns:wippy.session
+        - ns:wippy.session.persist
+      router: app:api
+    source: file://get_session.lua
+    modules:
+      - http
+      - security
+    imports:
+      message_repo: wippy.session.persist:message_repo
+      session_repo: wippy.session.persist:session_repo
+    method: handler
+    pool:
+      size: 2
+    
+  # wippy.session.api:get_session.endpoint
+  - name: get_session.endpoint
+    kind: http.endpoint
+    meta:
+      comment: Get session endpoint
+      description: Session management HTTP endpoints
+      depends_on:
+        - app:api
+        - ns:wippy.session
+        - ns:wippy.session.persist
+      router: app:api
+    method: GET
+    func: get_session
+    path: /sessions/get
+    
+  # wippy.session.api:list_sessions
+  - name: list_sessions
+    kind: function.lua
+    meta:
+      comment: List all user sessions
+      description: Session management HTTP endpoints
+      depends_on:
+        - app:api
+        - ns:wippy.session
+        - ns:wippy.session.persist
+      router: app:api
+    source: file://list_sessions.lua
+    modules:
+      - http
+      - security
+    imports:
+      session_repo: wippy.session.persist:session_repo
+    method: handler
+    pool:
+      size: 2
+    
+  # wippy.session.api:list_sessions.endpoint
+  - name: list_sessions.endpoint
+    kind: http.endpoint
+    meta:
+      comment: List sessions endpoint
+      description: Session management HTTP endpoints
+      depends_on:
+        - app:api
+        - ns:wippy.session
+        - ns:wippy.session.persist
+      router: app:api
+    method: GET
+    func: list_sessions
+    path: /sessions
+    
+  # wippy.session.api:session_messages
+  - name: session_messages
+    kind: function.lua
+    meta:
+      comment: Get messages for a session
+      description: Session management HTTP endpoints
+      depends_on:
+        - app:api
+        - ns:wippy.session
+        - ns:wippy.session.persist
+      router: app:api
+    source: file://session_messages.lua
+    modules:
+      - http
+      - security
+      - time
+    imports:
+      message_repo: wippy.session.persist:message_repo
+      session_repo: wippy.session.persist:session_repo
+    method: handler
+    pool:
+      size: 2
+    
+  # wippy.session.api:session_messages.endpoint
+  - name: session_messages.endpoint
+    kind: http.endpoint
+    meta:
+      comment: Session messages endpoint
+      description: Session management HTTP endpoints
+      depends_on:
+        - app:api
+        - ns:wippy.session
+        - ns:wippy.session.persist
+      router: app:api
+    method: GET
+    func: session_messages
+    path: /sessions/messages
+    

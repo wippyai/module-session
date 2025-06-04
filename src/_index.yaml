@@ -1,0 +1,48 @@
+version: "1.0"
+namespace: wippy.session
+
+entries:
+  # wippy.session:start_tokens
+  - name: start_tokens
+    kind: library.lua
+    meta:
+      comment: Library for creating and validating session start tokens
+      description: User sessions and conversation management system
+      depends_on:
+        - ns:wippy.agent
+        - ns:wippy.llm
+        - ns:wippy.agent.gen1
+    source: file://start_tokens.lua
+    modules:
+      - crypto
+      - base64
+      - json
+    
+  # wippy.session:start_tokens_test
+  - name: start_tokens_test
+    kind: function.lua
+    meta:
+      name: Start Tokens Library Test
+      type: test
+      comment: Tests the start_tokens library for creating and validating session start tokens
+      group: Session Tests
+      tags:
+        - session
+        - security
+        - token
+        - tests
+      description: User sessions and conversation management system
+      depends_on:
+        - ns:wippy.agent
+        - ns:wippy.llm
+        - ns:wippy.agent.gen1
+    source: file://start_tokens_test.lua
+    modules:
+      - crypto
+      - base64
+      - json
+    imports:
+      start_tokens: wippy.session:start_tokens
+      test: wippy.test:test
+    method: run_tests
+    
