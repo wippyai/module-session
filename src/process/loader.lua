@@ -72,6 +72,7 @@ function loader.create_session(args)
             name = token_data.start_func,
             params = token_data.start_params or {}
         }
+        init_function.params.session_id = args.session_id
     end
 
     -- Return state with session and context info

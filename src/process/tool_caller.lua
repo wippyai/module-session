@@ -32,6 +32,9 @@ function tool_caller:validate(tool_calls)
     local has_exclusive = false
     local exclusive_tool = nil
 
+
+
+
     -- First pass: check for exclusive tools and get metadata
     for _, tool_call in ipairs(tool_calls) do
         local tool_name = tool_call.name
@@ -98,8 +101,16 @@ end
 function tool_caller:execute(ctx, validated_tools)
     local results = {}
 
+    local tool_ctx = ctx
+
+    local ctx_executor = self.executor:with_context(ctx)
+
     for call_id, tool_call in pairs(validated_tools) do
         if not tool_call.valid then
+            results[call_id] = {
+                error = tool_call.error,
+                call = tool_call
+            }
             -- doing nothing
             goto continue
         end
@@ -119,8 +130,11 @@ function tool_caller:execute(ctx, validated_tools)
             args = parsed_args
         end
 
+        tool_ctx.call_id = call_id
+
         -- Execute the tool
-        local result, err = self.executor:with_context(ctx):call(registry_id, args)
+        local result, err = ctx_executor:call(registry_id, args)
+
         if err then
             -- Record error
             results[call_id] = {

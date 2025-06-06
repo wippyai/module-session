@@ -36,7 +36,8 @@ local TOPICS = {
 local COMMANDS = {
     STOP = "stop",
     MODEL = "model",
-    AGENT = "agent"
+    AGENT = "agent",
+    ARTIFACT = "artifact"
 }
 
 -- Message type constants
@@ -48,7 +49,8 @@ local MSG_TYPE = {
     FUNCTION = "function",
     DELEGATION = "delegation",
     AGENT_CHANGE = "agent_change",
-    MODEL_CHANGE = "model_change"
+    MODEL_CHANGE = "model_change",
+    ARTIFACT = "artifact",
 }
 
 -- Function status constants

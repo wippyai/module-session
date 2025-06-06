@@ -414,9 +414,45 @@ function controller:handle_command(command, payload)
         })
 
         return true
+    elseif command == COMMANDS.ARTIFACT then
+        -- Handle the artifact command
+        if not payload or not payload.artifact_id then
+            return false, "Artifact ID is required"
+        end
+
+        -- Register the artifact in the session state
+        local success, err = self:register_artifact(payload.artifact_id)
+        if not success then
+            return false, err
+        end
+
+        return true
     else
         return false, ERR.UNSUPPORTED_COMMAND
     end
+end
+
+function controller:register_artifact(artifact_id)
+    if not artifact_id then
+        return false, "Artifact ID is required"
+    end
+
+    -- Add a message for the artifact registration with the ARTIFACT type
+    local message_id = self.state:add_message(MSG_TYPE.ARTIFACT, "", {
+        artifact_id = artifact_id
+    })
+
+    if not message_id then
+        return false, "Failed to add message for artifact"
+    end
+
+    -- Notify clients about the new artifact message
+    self.upstream:send_message_update(message_id, "artifact", {
+        message_id = message_id,
+        artifact_id = artifact_id
+    })
+
+    return true
 end
 
 -- Handle delegation (direct delegation, not via tool)

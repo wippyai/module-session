@@ -137,6 +137,7 @@ local function handler()
             end
             params = decoded
         end
+        params.artifact_id = artifact_id
 
         -- Get any additional query params from current request
         local query = {}
@@ -145,8 +146,7 @@ local function handler()
         end
 
         -- Render the page using all params from artifact with empty query
-        local rendered_content, render_err = renderer.render(
-            page_id, params, query)
+        local rendered_content, render_err = renderer.render(page_id, params, query)
 
         if render_err then
             res:set_status(http.STATUS.INTERNAL_ERROR)

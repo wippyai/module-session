@@ -361,7 +361,7 @@ function session_state:add_function_call(function_name, arguments, metadata)
 end
 
 -- Update function call with result
-function session_state:update_function_result(message_id, result, ok, metadata)
+function session_state:update_function_result(message_id, result, ok, additional_metadata)
     if not message_id then
         return nil, "Message ID is required"
     end
@@ -391,8 +391,8 @@ function session_state:update_function_result(message_id, result, ok, metadata)
     end
 
     -- Add any additional metadata
-    if metadata then
-        for k, v in pairs(metadata) do
+    if additional_metadata then
+        for k, v in pairs(additional_metadata) do
             message.metadata[k] = v
         end
     end
