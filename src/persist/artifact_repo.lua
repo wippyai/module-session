@@ -1,6 +1,7 @@
 local sql = require("sql")
 local json = require("json")
 local time = require("time")
+local security = require("security")
 
 -- Hardcoded database resource name
 local DB_RESOURCE = "app:db"
@@ -18,17 +19,20 @@ end
 
 -- Create a new artifact
 function artifact_repo.create(artifact_id, session_id, kind, title, content, meta)
+    session_id = session_id or nil
+
     if not artifact_id or artifact_id == "" then
         return nil, "Artifact ID is required"
     end
-
-    if not session_id or session_id == "" then
-        return nil, "Session ID is required"
-    end
-
     if not kind or kind == "" then
         return nil, "Artifact kind is required"
     end
+
+    local actor = security.actor()
+    if not actor then
+        return nil, "No authenticated user found"
+    end
+    local user_id = actor:id()
 
     -- Convert meta to JSON if it's a table
     local meta_json = nil
@@ -50,21 +54,23 @@ function artifact_repo.create(artifact_id, session_id, kind, title, content, met
     end
 
     -- Check if session exists
-    local check_query = sql.builder.select("session_id")
-        :from("sessions")
-        :where("session_id = ?", session_id)
+    if session_id and session_id ~= "" then
+        local check_query = sql.builder.select("session_id")
+            :from("sessions")
+            :where("session_id = ?", session_id)
 
-    local check_executor = check_query:run_with(db)
-    local sessions, err = check_executor:query()
+        local check_executor = check_query:run_with(db)
+        local sessions, err = check_executor:query()
 
-    if err then
-        db:release()
-        return nil, "Failed to check if session exists: " .. err
-    end
+        if err then
+            db:release()
+            return nil, "Failed to check if session exists: " .. err
+        end
 
-    if #sessions == 0 then
-        db:release()
-        return nil, "Session not found"
+        if #sessions == 0 then
+            db:release()
+            return nil, "Session not found"
+        end
     end
 
     local now = time.now():format(time.RFC3339)
@@ -74,6 +80,7 @@ function artifact_repo.create(artifact_id, session_id, kind, title, content, met
         :set_map({
             artifact_id = artifact_id,
             session_id = session_id,
+            user_id = user_id,
             kind = kind,
             title = title or "",
             content = content or "",
@@ -95,6 +102,7 @@ function artifact_repo.create(artifact_id, session_id, kind, title, content, met
     return {
         artifact_id = artifact_id,
         session_id = session_id,
+        user_id = user_id,
         kind = kind,
         title = title,
         created_at = now,
@@ -114,7 +122,7 @@ function artifact_repo.get(artifact_id)
     end
 
     -- Build the SELECT query
-    local query = sql.builder.select("artifact_id", "session_id", "kind", "title", "content", "meta", "created_at", "updated_at")
+    local query = sql.builder.select("artifact_id", "session_id", "user_id", "kind", "title", "content", "meta", "created_at", "updated_at")
         :from("artifacts")
         :where("artifact_id = ?", artifact_id)
         :limit(1)
@@ -249,7 +257,7 @@ function artifact_repo.list_by_session(session_id, limit, offset)
     end
 
     -- Build the SELECT query
-    local query = sql.builder.select("artifact_id", "session_id", "kind", "title", "meta", "created_at", "updated_at")
+    local query = sql.builder.select("artifact_id", "session_id", "user_id", "kind", "title", "meta", "created_at", "updated_at")
         :from("artifacts")
         :where("session_id = ?", session_id)
         :order_by("created_at DESC")
@@ -301,7 +309,7 @@ function artifact_repo.list_by_kind(session_id, kind, limit, offset)
     end
 
     -- Build the SELECT query
-    local query = sql.builder.select("artifact_id", "session_id", "kind", "title", "meta", "created_at", "updated_at")
+    local query = sql.builder.select("artifact_id", "session_id", "user_id", "kind", "title", "meta", "created_at", "updated_at")
         :from("artifacts")
         :where(sql.builder.and_({
             sql.builder.expr("session_id = ?", session_id),

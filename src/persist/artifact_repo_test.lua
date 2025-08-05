@@ -267,11 +267,6 @@ local function define_tests()
             expect(artifact).to_be_nil()
             expect(err:match("Artifact ID is required")).not_to_be_nil()
 
-            -- Missing session_id
-            artifact, err = artifact_repo.create(uuid.v7(), "", "static", "title", "content")
-            expect(artifact).to_be_nil()
-            expect(err:match("Session ID is required")).not_to_be_nil()
-
             -- Missing kind
             artifact, err = artifact_repo.create(uuid.v7(), test_data.session_id, "", "title", "content")
             expect(artifact).to_be_nil()
