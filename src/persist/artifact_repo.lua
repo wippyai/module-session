@@ -2,9 +2,10 @@ local sql = require("sql")
 local json = require("json")
 local time = require("time")
 local security = require("security")
+local env = require("env")
 
--- Hardcoded database resource name
-local DB_RESOURCE = "app:db"
+-- Constants
+local DB_RESOURCE, _ = env.get("wippy.session:target_db")
 
 local artifact_repo = {}
 

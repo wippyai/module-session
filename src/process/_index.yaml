@@ -2,6 +2,15 @@ version: "1.0"
 namespace: wippy.session.process
 
 entries:
+  # Requirements
+  - name: __requirement-target_processes_host
+    kind: ns.requirement
+    meta:
+      description: "Application processes host ID for process services"
+    targets:
+      - entry: session
+        path: ".meta.default_host"
+
   # wippy.session.process:consts
   - name: consts
     kind: library.lua
@@ -106,7 +115,6 @@ entries:
         - ns:wippy.session.persist
         - ns:wippy.llm
         - ns:wippy.agent.gen1
-      default_host: app:processes
     source: file://session.lua
     modules:
       - time

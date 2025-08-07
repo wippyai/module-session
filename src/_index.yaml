@@ -2,6 +2,96 @@ version: "1.0"
 namespace: wippy.session
 
 entries:
+  # Requirements
+  - name: __requirement-target_api_router
+    kind: ns.requirement
+    meta:
+      description: "Application API router ID"
+    targets:
+      - entry: target_api_router
+        path: ".default"
+
+  - name: __requirement-target_processes_host
+    kind: ns.requirement
+    meta:
+      description: "Application processes host ID"
+    targets:
+      - entry: target_processes_host
+        path: ".default"
+
+  - name: __requirement-target_db
+    kind: ns.requirement
+    meta:
+      description: "Application database ID"
+    targets:
+      - entry: target_db
+        path: ".default"
+
+  # Dependencies
+  - name: __dependency.wippy.llm
+    kind: "ns.dependency"
+    meta:
+      description: "LLM component"
+    component: "wippy/llm"
+    version: ">=v0.0.12"
+
+  - name: __dependency.wippy.migration
+    kind: "ns.dependency"
+    meta:
+      description: "Migration component"
+    component: "wippy/migration"
+    version: ">=v0.0.10"
+
+  - name: __dependency.wippy.actor
+    kind: "ns.dependency"
+    meta:
+      description: "Actor component"
+    component: "wippy/actor"
+    version: ">=v0.0.10"
+
+  - name: __dependency.wippy.agent
+    kind: "ns.dependency"
+    meta:
+      description: "Agent component"
+    component: "wippy/agent"
+    version: ">=v0.0.10"
+
+  - name: __dependency.wippy.test
+    kind: "ns.dependency"
+    meta:
+      description: "Testing component"
+    component: "wippy/test"
+    version: ">=v0.0.8"
+
+  # Environment Storage
+  - name: envs
+    kind: env.storage.os
+    meta:
+      type: envstorage
+      comment: OS storage for environment variables
+
+  # Environment Variables
+  - name: target_api_router
+    kind: env.variable
+    meta:
+      type: config_key
+      comment: API router resource identifier
+    storage: wippy.session:envs
+
+  - name: target_processes_host
+    kind: env.variable
+    meta:
+      type: config_key
+      comment: Processes host resource identifier
+    storage: wippy.session:envs
+
+  - name: target_db
+    kind: env.variable
+    meta:
+      type: config_key
+      comment: Database resource identifier
+    storage: wippy.session:envs
+
   # wippy.session:start_tokens
   - name: start_tokens
     kind: library.lua
@@ -17,7 +107,7 @@ entries:
       - crypto
       - base64
       - json
-    
+
   # wippy.session:start_tokens_test
   - name: start_tokens_test
     kind: function.lua
@@ -45,4 +135,3 @@ entries:
       start_tokens: wippy.session:start_tokens
       test: wippy.test:test
     method: run_tests
-    

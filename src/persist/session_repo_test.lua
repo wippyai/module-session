@@ -5,6 +5,7 @@ local session_repo = require("session_repo")
 local context_repo = require("context_repo")
 local time = require("time")
 local security = require("security")
+local env = require("env")
 
 local function define_tests()
     describe("Session Repository", function()
@@ -48,7 +49,8 @@ local function define_tests()
         -- Clean up test data after all tests
         after_all(function()
             -- Get a database connection for cleanup
-            local db, err = sql.get("app:db")
+            local db_resource, _ = env.get("wippy.session:target_db")
+            local db, err = sql.get(db_resource)
             if err then
                 error("Failed to connect to database: " .. err)
             end
