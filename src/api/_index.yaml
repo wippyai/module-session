@@ -2,6 +2,33 @@ version: "1.0"
 namespace: wippy.session.api
 
 entries:
+  # Requirements
+  - name: __requirement-target_api_router
+    kind: ns.requirement
+    meta:
+      description: "Application API router ID for HTTP endpoints"
+    targets:
+      - entry: get_artifact
+        path: ".meta.router"
+      - entry: get_artifact.endpoint
+        path: ".meta.router"
+      - entry: get_artifact_content
+        path: ".meta.router"
+      - entry: get_artifact_content.endpoint
+        path: ".meta.router"
+      - entry: get_session
+        path: ".meta.router"
+      - entry: get_session.endpoint
+        path: ".meta.router"
+      - entry: list_sessions
+        path: ".meta.router"
+      - entry: list_sessions.endpoint
+        path: ".meta.router"
+      - entry: session_messages
+        path: ".meta.router"
+      - entry: session_messages.endpoint
+        path: ".meta.router"
+
   # wippy.session.api:get_artifact
   - name: get_artifact
     kind: function.lua
@@ -10,7 +37,6 @@ entries:
       depends_on:
         - ns:app
         - ns:wippy.session.persist
-      router: app:api
     source: file://get_artifact.lua
     modules:
       - http
@@ -30,7 +56,6 @@ entries:
       comment: Endpoint that returns metadata for an artifact
       depends_on:
         - ns:app
-      router: app:api
     method: GET
     func: get_artifact
     path: /artifact/{id}
@@ -43,7 +68,6 @@ entries:
       depends_on:
         - ns:app
         - ns:wippy.session.persist
-      router: app:api
     source: file://get_artifact_content.lua
     modules:
       - http
@@ -64,7 +88,6 @@ entries:
       comment: Endpoint that returns content for an artifact
       depends_on:
         - ns:app
-      router: app:api
     method: GET
     func: get_artifact_content
     path: /artifact/{id}/content
@@ -79,7 +102,6 @@ entries:
         - app:api
         - ns:wippy.session
         - ns:wippy.session.persist
-      router: app:api
     source: file://get_session.lua
     modules:
       - http
@@ -101,7 +123,6 @@ entries:
         - app:api
         - ns:wippy.session
         - ns:wippy.session.persist
-      router: app:api
     method: GET
     func: get_session
     path: /sessions/get
@@ -116,7 +137,6 @@ entries:
         - app:api
         - ns:wippy.session
         - ns:wippy.session.persist
-      router: app:api
     source: file://list_sessions.lua
     modules:
       - http
@@ -137,7 +157,6 @@ entries:
         - app:api
         - ns:wippy.session
         - ns:wippy.session.persist
-      router: app:api
     method: GET
     func: list_sessions
     path: /sessions
@@ -152,7 +171,6 @@ entries:
         - app:api
         - ns:wippy.session
         - ns:wippy.session.persist
-      router: app:api
     source: file://session_messages.lua
     modules:
       - http
@@ -175,7 +193,6 @@ entries:
         - app:api
         - ns:wippy.session
         - ns:wippy.session.persist
-      router: app:api
     method: GET
     func: session_messages
     path: /sessions/messages

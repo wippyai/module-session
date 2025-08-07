@@ -2,6 +2,60 @@ version: "1.0"
 namespace: wippy.session
 
 entries:
+  # Requirements
+  - name: __requirement-target_api_router
+    kind: ns.requirement
+    meta:
+      description: "Application API router ID"
+    targets:
+      - entry: target_api_router
+        path: ".default"
+
+  - name: __requirement-target_processes_host
+    kind: ns.requirement
+    meta:
+      description: "Application processes host ID"
+    targets:
+      - entry: target_processes_host
+        path: ".default"
+
+  - name: __requirement-target_db
+    kind: ns.requirement
+    meta:
+      description: "Application database ID"
+    targets:
+      - entry: target_db
+        path: ".default"
+
+  # Environment Storage
+  - name: envs
+    kind: env.storage.os
+    meta:
+      type: envstorage
+      comment: OS storage for environment variables
+
+  # Environment Variables
+  - name: target_api_router
+    kind: env.variable
+    meta:
+      type: config_key
+      comment: API router resource identifier
+    storage: wippy.session:envs
+
+  - name: target_processes_host
+    kind: env.variable
+    meta:
+      type: config_key
+      comment: Processes host resource identifier
+    storage: wippy.session:envs
+
+  - name: target_db
+    kind: env.variable
+    meta:
+      type: config_key
+      comment: Database resource identifier
+    storage: wippy.session:envs
+
   # wippy.session:start_tokens
   - name: start_tokens
     kind: library.lua

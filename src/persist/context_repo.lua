@@ -1,8 +1,9 @@
 local sql = require("sql")
 local time = require("time")
+local env = require("env")
 
--- Hardcoded database resource name
-local DB_RESOURCE = "app:db"
+-- Constants
+local DB_RESOURCE, _ = env.get("wippy.session:target_db")
 
 local context_repo = {}
 
