@@ -2,25 +2,6 @@ version: "1.0"
 namespace: wippy.session.migration
 
 entries:
-  # Requirements
-  - name: __requirement-target_db
-    kind: ns.requirement
-    meta:
-      description: "Application database ID for migrations"
-    targets:
-      - entry: 01_create_contexts_table
-        path: ".meta.target_db"
-      - entry: 02_create_sessions_table
-        path: ".meta.target_db"
-      - entry: 03_create_session_contexts_table
-        path: ".meta.target_db"
-      - entry: 04_create_messages_table
-        path: ".meta.target_db"
-      - entry: 05_create_artifacts_table
-        path: ".meta.target_db"
-      - entry: 06_add_user_id_to_artifacts_table
-        path: ".meta.target_db"
-
   # wippy.session.migration:01_create_contexts_table
   - name: 01_create_contexts_table
     kind: function.lua
@@ -36,7 +17,7 @@ entries:
     imports:
       migration: wippy.migration:migration
     method: migrate
-    
+
   # wippy.session.migration:02_create_sessions_table
   - name: 02_create_sessions_table
     kind: function.lua
@@ -52,7 +33,7 @@ entries:
     imports:
       migration: wippy.migration:migration
     method: migrate
-    
+
   # wippy.session.migration:03_create_session_contexts_table
   - name: 03_create_session_contexts_table
     kind: function.lua
@@ -68,7 +49,7 @@ entries:
     imports:
       migration: wippy.migration:migration
     method: migrate
-    
+
   # wippy.session.migration:04_create_messages_table
   - name: 04_create_messages_table
     kind: function.lua
@@ -84,7 +65,7 @@ entries:
     imports:
       migration: wippy.migration:migration
     method: migrate
-    
+
   # wippy.session.migration:05_create_artifacts_table
   - name: 05_create_artifacts_table
     kind: function.lua

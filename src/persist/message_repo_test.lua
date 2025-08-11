@@ -56,7 +56,7 @@ local function define_tests()
         -- Clean up test data after all tests
         after_all(function()
             -- Get a database connection for cleanup
-            local db_resource, _ = env.get("wippy.session:target_db")
+            local db_resource, _ = env.get("wippy.session:env-target_db")
             local db, err = sql.get(db_resource)
             if err then
                 error("Failed to connect to database: " .. err)
