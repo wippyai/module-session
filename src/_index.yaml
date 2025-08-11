@@ -3,29 +3,61 @@ namespace: wippy.session
 
 entries:
   # Requirements
-  - name: __requirement-target_api_router
-    kind: ns.requirement
-    meta:
-      description: "Application API router ID"
-    targets:
-      - entry: target_api_router
-        path: ".default"
-
-  - name: __requirement-target_processes_host
+  - name: processes_host
     kind: ns.requirement
     meta:
       description: "Application processes host ID"
     targets:
-      - entry: target_processes_host
-        path: ".default"
+      - entry: wippy.session.process:session
+        path: ".meta.default_host"
 
-  - name: __requirement-target_db
+  - name: api_router
+    kind: ns.requirement
+    meta:
+      description: "Application API router ID for HTTP endpoints"
+    targets:
+      - entry: env-target_api_router
+        path: ".default"
+      - entry: wippy.session.api:get_artifact
+        path: ".meta.router"
+      - entry: wippy.session.api:get_artifact.endpoint
+        path: ".meta.router"
+      - entry: wippy.session.api:get_artifact_content
+        path: ".meta.router"
+      - entry: wippy.session.api:get_artifact_content.endpoint
+        path: ".meta.router"
+      - entry: wippy.session.api:get_session
+        path: ".meta.router"
+      - entry: wippy.session.api:get_session.endpoint
+        path: ".meta.router"
+      - entry: wippy.session.api:list_sessions
+        path: ".meta.router"
+      - entry: wippy.session.api:list_sessions.endpoint
+        path: ".meta.router"
+      - entry: wippy.session.api:session_messages
+        path: ".meta.router"
+      - entry: wippy.session.api:session_messages.endpoint
+        path: ".meta.router"
+
+  - name: target_db
     kind: ns.requirement
     meta:
       description: "Application database ID"
     targets:
-      - entry: target_db
+      - entry: env-target_db
         path: ".default"
+      - entry: wippy.session.migration:01_create_contexts_table
+        path: ".meta.target_db"
+      - entry: wippy.session.migration:02_create_sessions_table
+        path: ".meta.target_db"
+      - entry: wippy.session.migration:03_create_session_contexts_table
+        path: ".meta.target_db"
+      - entry: wippy.session.migration:04_create_messages_table
+        path: ".meta.target_db"
+      - entry: wippy.session.migration:05_create_artifacts_table
+        path: ".meta.target_db"
+      - entry: wippy.session.migration:06_add_user_id_to_artifacts_table
+        path: ".meta.target_db"
 
   # Dependencies
   - name: __dependency.wippy.llm
@@ -71,21 +103,16 @@ entries:
       comment: OS storage for environment variables
 
   # Environment Variables
-  - name: target_api_router
+  # wippy.session:env-target_api_router
+  - name: env-target_api_router
     kind: env.variable
     meta:
       type: config_key
       comment: API router resource identifier
     storage: wippy.session:envs
 
-  - name: target_processes_host
-    kind: env.variable
-    meta:
-      type: config_key
-      comment: Processes host resource identifier
-    storage: wippy.session:envs
-
-  - name: target_db
+  # wippy.session:env-target_db
+  - name: env-target_db
     kind: env.variable
     meta:
       type: config_key

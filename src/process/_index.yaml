@@ -2,15 +2,6 @@ version: "1.0"
 namespace: wippy.session.process
 
 entries:
-  # Requirements
-  - name: __requirement-target_processes_host
-    kind: ns.requirement
-    meta:
-      description: "Application processes host ID for process services"
-    targets:
-      - entry: session
-        path: ".meta.default_host"
-
   # wippy.session.process:consts
   - name: consts
     kind: library.lua
@@ -23,7 +14,7 @@ entries:
         - ns:wippy.llm
         - ns:wippy.agent.gen1
     source: file://consts.lua
-    
+
   # wippy.session.process:controller
   - name: controller
     kind: library.lua
@@ -49,7 +40,7 @@ entries:
       queue: wippy.session.process:queue
       tool_caller: wippy.session.process:tool_caller
       tool_handler: wippy.session.process:tool_handler
-    
+
   # wippy.session.process:loader
   - name: loader
     kind: library.lua
@@ -71,7 +62,7 @@ entries:
       message_repo: wippy.session.persist:message_repo
       session_repo: wippy.session.persist:session_repo
       start_tokens: wippy.session:start_tokens
-    
+
   # wippy.session.process:prompt_builder
   - name: prompt_builder
     kind: library.lua
@@ -90,7 +81,7 @@ entries:
     imports:
       prompt: wippy.llm:prompt
       upload_repo: wippy.uploads:upload_repo
-    
+
   # wippy.session.process:queue
   - name: queue
     kind: library.lua
@@ -103,7 +94,7 @@ entries:
         - ns:wippy.llm
         - ns:wippy.agent.gen1
     source: file://queue.lua
-    
+
   # wippy.session.process:session
   - name: session
     kind: process.lua
@@ -128,7 +119,7 @@ entries:
       session_state: wippy.session.process:session_state
       session_upstream: wippy.session.process:session_upstream
     method: run
-    
+
   # wippy.session.process:session_context
   - name: session_context
     kind: library.lua
@@ -145,7 +136,7 @@ entries:
       - json
     imports:
       context_repo: wippy.session.persist:context_repo
-    
+
   # wippy.session.process:session_state
   - name: session_state
     kind: library.lua
@@ -166,7 +157,7 @@ entries:
       message_repo: wippy.session.persist:message_repo
       session_contexts_repo: wippy.session.persist:session_contexts_repo
       session_repo: wippy.session.persist:session_repo
-    
+
   # wippy.session.process:session_upstream
   - name: session_upstream
     kind: library.lua
@@ -182,7 +173,7 @@ entries:
     modules:
       - time
     imports: {}
-    
+
   # wippy.session.process:tool_caller
   - name: tool_caller
     kind: library.lua
@@ -201,7 +192,7 @@ entries:
       - funcs
     imports:
       tools: wippy.llm:tools
-    
+
   # wippy.session.process:tool_handler
   - name: tool_handler
     kind: library.lua
@@ -219,4 +210,3 @@ entries:
       - uuid
     imports:
       artifact_repo: wippy.session.persist:artifact_repo
-    

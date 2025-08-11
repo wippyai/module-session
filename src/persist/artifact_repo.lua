@@ -5,7 +5,7 @@ local security = require("security")
 local env = require("env")
 
 -- Constants
-local DB_RESOURCE, _ = env.get("wippy.session:target_db")
+local DB_RESOURCE, _ = env.get("wippy.session:env-target_db")
 
 local artifact_repo = {}
 
