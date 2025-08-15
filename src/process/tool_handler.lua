@@ -335,6 +335,14 @@ function tool_handler.process_control_context(controller, context)
     if context.session then
         local session_context_success = true
 
+        -- Delete session context values
+        if context.session.delete and type(context.session.delete) == "table" then
+            for _, key in ipairs(context.session.delete) do
+                local delete_success, _ = ctx_manager:delete_context(key)
+                if not delete_success then session_context_success = false end
+            end
+        end
+
         -- Set session context values
         if context.session.set and type(context.session.set) == "table" then
             for key, value in pairs(context.session.set) do
@@ -342,14 +350,6 @@ function tool_handler.process_control_context(controller, context)
                 if not set_success then
                     session_context_success = false
                 end
-            end
-        end
-
-        -- Delete session context values
-        if context.session.delete and type(context.session.delete) == "table" then
-            for _, key in ipairs(context.session.delete) do
-                local delete_success, _ = ctx_manager:delete_context(key)
-                if not delete_success then session_context_success = false end
             end
         end
 
