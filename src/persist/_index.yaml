@@ -205,6 +205,7 @@ entries:
       - sql
       - json
       - time
+      - env
 
   # wippy.session.persist:session_repo_test
   - name: session_repo_test
