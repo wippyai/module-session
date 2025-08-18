@@ -4,12 +4,12 @@ local time = require("time")
 local env = require("env")
 
 -- Constants
-local DB_RESOURCE, _ = env.get("wippy.session:env-target_db")
-
 local session_repo = {}
 
 -- Get a database connection
 local function get_db()
+    local DB_RESOURCE, _ = env.get("wippy.session:env-target_db")
+
     local db, err = sql.get(DB_RESOURCE)
     if err then
         return nil, "Failed to connect to database: " .. err
