@@ -17,7 +17,8 @@ entries:
       - sql
       - json
       - time
-    
+      - env
+
   # wippy.session.persist:artifact_repo_test
   - name: artifact_repo_test
     kind: function.lua
@@ -49,7 +50,7 @@ entries:
       session_repo: wippy.session.persist:session_repo
       test: wippy.test:test
     method: run_tests
-    
+
   # wippy.session.persist:context_repo
   - name: context_repo
     kind: library.lua
@@ -64,7 +65,7 @@ entries:
     modules:
       - sql
       - time
-    
+
   # wippy.session.persist:context_repo_test
   - name: context_repo_test
     kind: function.lua
@@ -93,7 +94,7 @@ entries:
       context_repo: wippy.session.persist:context_repo
       test: wippy.test:test
     method: run_tests
-    
+
   # wippy.session.persist:message_repo
   - name: message_repo
     kind: library.lua
@@ -109,7 +110,7 @@ entries:
       - sql
       - json
       - time
-    
+
   # wippy.session.persist:message_repo_test
   - name: message_repo_test
     kind: function.lua
@@ -141,7 +142,7 @@ entries:
       session_repo: wippy.session.persist:session_repo
       test: wippy.test:test
     method: run_tests
-    
+
   # wippy.session.persist:session_contexts_repo
   - name: session_contexts_repo
     kind: library.lua
@@ -157,7 +158,7 @@ entries:
       - sql
       - json
       - time
-    
+
   # wippy.session.persist:session_contexts_repo_test
   - name: session_contexts_repo_test
     kind: function.lua
@@ -188,7 +189,7 @@ entries:
       session_repo: wippy.session.persist:session_repo
       test: wippy.test:test
     method: run_tests
-    
+
   # wippy.session.persist:session_repo
   - name: session_repo
     kind: library.lua
@@ -204,7 +205,7 @@ entries:
       - sql
       - json
       - time
-    
+
   # wippy.session.persist:session_repo_test
   - name: session_repo_test
     kind: function.lua
@@ -235,4 +236,3 @@ entries:
       session_repo: wippy.session.persist:session_repo
       test: wippy.test:test
     method: run_tests
-    
