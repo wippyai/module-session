@@ -22,6 +22,7 @@ local function count_table_elements(tbl)
 end
 
 -- Make this function available to our module
+local table = {}
 table.count = count_table_elements
 
 -- Use constants from consts package
