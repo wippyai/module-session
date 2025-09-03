@@ -3,48 +3,12 @@ namespace: wippy.session
 
 entries:
   # Requirements
-  - name: processes_host
+  - name: database_resource
     kind: ns.requirement
     meta:
-      description: "Application processes host ID"
+      description: "Database resource for session storage"
     targets:
-      - entry: wippy.session.process:session
-        path: ".meta.default_host"
-
-  - name: api_router
-    kind: ns.requirement
-    meta:
-      description: "Application API router ID for HTTP endpoints"
-    targets:
-      - entry: env-target_api_router
-        path: ".default"
-      - entry: wippy.session.api:get_artifact
-        path: ".meta.router"
-      - entry: wippy.session.api:get_artifact.endpoint
-        path: ".meta.router"
-      - entry: wippy.session.api:get_artifact_content
-        path: ".meta.router"
-      - entry: wippy.session.api:get_artifact_content.endpoint
-        path: ".meta.router"
-      - entry: wippy.session.api:get_session
-        path: ".meta.router"
-      - entry: wippy.session.api:get_session.endpoint
-        path: ".meta.router"
-      - entry: wippy.session.api:list_sessions
-        path: ".meta.router"
-      - entry: wippy.session.api:list_sessions.endpoint
-        path: ".meta.router"
-      - entry: wippy.session.api:session_messages
-        path: ".meta.router"
-      - entry: wippy.session.api:session_messages.endpoint
-        path: ".meta.router"
-
-  - name: target_db
-    kind: ns.requirement
-    meta:
-      description: "Application database ID"
-    targets:
-      - entry: env-target_db
+      - entry: wippy.session.env:database_resource
         path: ".default"
       - entry: wippy.session.migration:01_create_contexts_table
         path: ".meta.target_db"
@@ -56,8 +20,86 @@ entries:
         path: ".meta.target_db"
       - entry: wippy.session.migration:05_create_artifacts_table
         path: ".meta.target_db"
-      - entry: wippy.session.migration:06_add_user_id_to_artifacts_table
+      - entry: wippy.session.migration:06_add_session_config_meta_fields
         path: ".meta.target_db"
+      - entry: wippy.session.migration:07_migrate_session_data_to_new_structure
+        path: ".meta.target_db"
+      - entry: wippy.session.migration:08_remove_legacy_session_fields
+        path: ".meta.target_db"
+    default: "app:db"
+
+  - name: token_checkpoint_threshold
+    kind: ns.requirement
+    meta:
+      description: "Token count threshold for creating conversation checkpoints"
+    targets:
+      - entry: wippy.session.env:token_checkpoint_threshold
+        path: ".default"
+    default: "20000"
+
+  - name: max_message_limit
+    kind: ns.requirement
+    meta:
+      description: "Maximum messages to load for prompt building"
+    targets:
+      - entry: wippy.session.env:max_message_limit
+        path: ".default"
+    default: "500"
+
+  - name: checkpoint_function_id
+    kind: ns.requirement
+    meta:
+      description: "Function ID for generating checkpoint summaries (checkpoints enabled when set)"
+    targets:
+      - entry: wippy.session.env:checkpoint_function_id
+        path: ".default"
+    default: "wippy.session.funcs:checkpoint"
+
+  - name: title_function_id
+    kind: ns.requirement
+    meta:
+      description: "Function ID for generating session titles (automatic titles enabled when set)"
+    targets:
+      - entry: wippy.session.env:title_function_id
+        path: ".default"
+    default: "wippy.session.funcs:title"
+
+  - name: default_host
+    kind: ns.requirement
+    meta:
+      description: "Default host for session processes"
+    targets:
+      - entry: wippy.session.env:default_host
+        path: ".default"
+    default: "app:processes"
+
+  - name: gc_interval
+    kind: ns.requirement
+    meta:
+      description: "Garbage collection interval for session cleanup"
+    targets:
+      - entry: wippy.session.env:gc_interval
+        path: ".default"
+    default: "300s"
+
+  - name: delegation_func_id
+    kind: ns.requirement
+    meta:
+      description: "Function ID for delegation calls (delegation enabled when set)"
+    targets:
+      - entry: wippy.session.env:delegation_func_id
+        path: ".default"
+    default: "wippy.session.funcs:delegate"
+  # wippy.session:consts
+  - name: consts
+    kind: library.lua
+    meta:
+      comment: System-wide constants and configuration management for session system
+      description: Environment variable handling, status constants, error codes, and configuration defaults
+    source: file://consts.lua
+    modules:
+      - env
+      - time
 
   # Dependencies
   - name: __dependency.wippy.llm
@@ -65,7 +107,7 @@ entries:
     meta:
       description: "LLM component"
     component: "wippy/llm"
-    version: ">=v0.0.12"
+    version: ">=v0.2.0"
 
   - name: __dependency.wippy.migration
     kind: "ns.dependency"
@@ -74,19 +116,12 @@ entries:
     component: "wippy/migration"
     version: ">=v0.0.10"
 
-  - name: __dependency.wippy.actor
-    kind: "ns.dependency"
-    meta:
-      description: "Actor component"
-    component: "wippy/actor"
-    version: ">=v0.0.10"
-
   - name: __dependency.wippy.agent
     kind: "ns.dependency"
     meta:
       description: "Agent component"
     component: "wippy/agent"
-    version: ">=v0.0.10"
+    version: ">=v0.2.0"
 
   - name: __dependency.wippy.test
     kind: "ns.dependency"
@@ -95,45 +130,19 @@ entries:
     component: "wippy/test"
     version: ">=v0.0.8"
 
-  # Environment Storage
-  - name: envs
-    kind: env.storage.os
-    meta:
-      type: envstorage
-      comment: OS storage for environment variables
-
-  # Environment Variables
-  # wippy.session:env-target_api_router
-  - name: env-target_api_router
-    kind: env.variable
-    meta:
-      type: config_key
-      comment: API router resource identifier
-    storage: wippy.session:envs
-
-  # wippy.session:env-target_db
-  - name: env-target_db
-    kind: env.variable
-    meta:
-      type: config_key
-      comment: Database resource identifier
-    storage: wippy.session:envs
-
   # wippy.session:start_tokens
   - name: start_tokens
     kind: library.lua
     meta:
       comment: Library for creating and validating session start tokens
       description: User sessions and conversation management system
-      depends_on:
-        - ns:wippy.agent
-        - ns:wippy.llm
-        - ns:wippy.agent.gen1
     source: file://start_tokens.lua
     modules:
       - crypto
       - base64
       - json
+    imports:
+      consts: wippy.session:consts
 
   # wippy.session:start_tokens_test
   - name: start_tokens_test
@@ -142,17 +151,13 @@ entries:
       name: Start Tokens Library Test
       type: test
       comment: Tests the start_tokens library for creating and validating session start tokens
-      group: Session Tests
+      group: Chat Session
       tags:
         - session
         - security
         - token
         - tests
       description: User sessions and conversation management system
-      depends_on:
-        - ns:wippy.agent
-        - ns:wippy.llm
-        - ns:wippy.agent.gen1
     source: file://start_tokens_test.lua
     modules:
       - crypto
@@ -162,3 +167,18 @@ entries:
       start_tokens: wippy.session:start_tokens
       test: wippy.test:test
     method: run_tests
+
+  # wippy.session:prompt_builder
+  - name: prompt_builder
+    kind: library.lua
+    meta:
+      comment: Prompt construction and formatting library for session messages
+      description: Builds prompts from message history, context, and templates
+    source: file://prompt_builder.lua
+    modules:
+      - text
+      - json
+    imports:
+      consts: wippy.session:consts
+      prompt: wippy.llm:prompt
+      upload_repo: userspace.uploads:upload_repo

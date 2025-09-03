@@ -1,14 +1,14 @@
 local sql = require("sql")
 local json = require("json")
 local time = require("time")
-local env = require("env")
+local consts = require("consts")
 
 -- Constants
 local message_repo = {}
 
 -- Get a database connection
 local function get_db()
-    local DB_RESOURCE, _ = env.get("wippy.session:env-target_db")
+    local DB_RESOURCE, _ = consts.get_db_resource()
 
     local db, err = sql.get(DB_RESOURCE)
     if err then
@@ -86,7 +86,6 @@ function message_repo.create(message_id, session_id, msg_type, data, metadata)
 
     -- Build the UPDATE query for session's last message date
     local update_query = sql.builder.update("sessions")
-
         :set("last_message_date", now)
         :where("session_id = ?", session_id)
 
@@ -216,7 +215,6 @@ function message_repo.update_metadata(message_id, metadata)
 
     -- Build the UPDATE query
     local update_query = sql.builder.update("messages")
-
         :set("metadata", metadata_json)
         :where("message_id = ?", message_id)
 
@@ -332,6 +330,57 @@ function message_repo.list_by_session(session_id, limit, cursor, direction)
         next_cursor = next_cursor,
         prev_cursor = prev_cursor
     }
+end
+
+-- List messages after a specific message ID (efficient range query)
+function message_repo.list_after_message(session_id, after_message_id, limit)
+    if not session_id or session_id == "" then
+        return nil, "Session ID is required"
+    end
+
+    if not after_message_id or after_message_id == "" then
+        return nil, "After message ID is required"
+    end
+
+    local db, err = get_db()
+    if err then
+        return nil, err
+    end
+
+    -- Default limit if not provided
+    limit = limit or 250
+
+    -- Build the SELECT query
+    local query = sql.builder.select("message_id", "session_id", "date", "type", "data", "metadata")
+        :from("messages")
+        :where(sql.builder.and_({
+            sql.builder.expr("session_id = ?", session_id),
+            sql.builder.expr("message_id >= ?", after_message_id)
+        }))
+        :order_by("date ASC")
+        :limit(limit)
+
+    -- Execute the query
+    local executor = query:run_with(db)
+    local messages, err = executor:query()
+
+    db:release()
+
+    if err then
+        return nil, "Failed to list messages after message ID: " .. err
+    end
+
+    -- Parse metadata JSON if it exists
+    for i, message in ipairs(messages) do
+        if message.metadata and message.metadata ~= "" then
+            local decoded, err = json.decode(message.metadata)
+            if not err then
+                message.metadata = decoded
+            end
+        end
+    end
+
+    return messages
 end
 
 -- List messages by type within a session

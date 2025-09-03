@@ -1,0 +1,133 @@
+version: "1.0"
+namespace: wippy.session.funcs
+
+entries:
+  # wippy.session.funcs:delegate
+  - name: delegate
+    kind: function.lua
+    meta:
+      type: tool
+      title: Delegate To Agent
+      comment: Handles delegation by running the target agent in a dataflow workflow within the session context
+      tags:
+        - delegation
+        - session
+        - workflow
+        - agent
+        - dataflow
+      description: Creates and executes a dataflow workflow for the target agent, running in isolation without access to session context or conversation history. Encapsulated function for standalone delegation.
+      input_schema: |
+        {
+          "type": "object",
+          "properties": {            
+            "message": {
+              "type": "string",
+              "description": "The message to forward to the target agent"
+            }      
+          },
+          "required": ["message"]
+        }
+      llm_description: Delegate a task to another agent by running them in an isolated dataflow workflow. The target agent will run independently without access to your conversation history. Ensure you include all necessary context in your delegation message.
+    source: file://delegate.lua
+    modules:
+      - json
+      - uuid
+      - ctx
+      - security
+    imports:
+      client: wippy.dataflow:client
+      consts: wippy.dataflow:consts
+      agent_registry: wippy.agent.discovery:registry
+    method: handle
+
+  # wippy.session.funcs:checkpoint
+  - name: checkpoint
+    kind: function.lua
+    meta:
+      type: tool
+      title: Generate Session Checkpoint
+      comment: Generates comprehensive conversation summaries for context compression within specified message ranges
+      tags:
+        - checkpoint
+        - session
+        - summary
+        - compression
+        - context
+      description: Creates structured conversation summaries by analyzing message ranges, detecting tool usage patterns, and generating actionable context for session management. Uses current user authentication context.
+      input_schema: |
+        {
+          "type": "object",
+          "properties": {
+            "session_id": {
+              "type": "string",
+              "description": "The session ID to generate checkpoint for"
+            },
+            "first_msg_id": {
+              "type": "string", 
+              "description": "The first message ID in the range to summarize"
+            },
+            "last_msg_id": {
+              "type": "string",
+              "description": "The last message ID in the range to summarize"
+            }
+          },
+          "required": ["session_id", "first_msg_id", "last_msg_id"]
+        }
+      llm_alias: GenerateCheckpoint
+      llm_description: Generate a comprehensive summary of a conversation range for context compression. Analyzes tool usage patterns, failed attempts, and creates structured summaries for efficient session management.
+    source: file://checkpoint.lua
+    modules:
+      - json
+      - time
+      - security
+    imports:
+      session: wippy.session.persist:reader
+      llm: wippy.llm:llm
+      prompt: wippy.llm:prompt
+    method: handle
+
+  # wippy.session.funcs:title
+  - name: title
+    kind: function.lua
+    meta:
+      type: tool
+      title: Generate Session Title
+      comment: Generates concise, descriptive titles for conversation segments within specified message ranges
+      tags:
+        - title
+        - session
+        - generation
+        - naming
+        - conversation
+      description: Analyzes conversation content within a message range to generate clear, specific titles that capture the main topic or purpose. Uses current user authentication context for session access.
+      input_schema: |
+        {
+          "type": "object",
+          "properties": {
+            "session_id": {
+              "type": "string",
+              "description": "The session ID to generate title for"
+            },
+            "first_msg_id": {
+              "type": "string",
+              "description": "The first message ID in the range to analyze"
+            },
+            "last_msg_id": {
+              "type": "string", 
+              "description": "The last message ID in the range to analyze"
+            }
+          },
+          "required": ["session_id", "first_msg_id", "last_msg_id"]
+        }
+      llm_alias: GenerateTitle
+      llm_description: Generate a concise, descriptive title (3-8 words) for a conversation segment. Analyzes the main topics and purposes within the specified message range to create clear, specific titles.
+    source: file://title.lua
+    modules:
+      - json
+      - time
+      - security
+    imports:
+      session: wippy.session.persist:reader
+      llm: wippy.llm:llm
+      prompt: wippy.llm:prompt
+    method: handle

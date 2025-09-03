@@ -1,0 +1,84 @@
+version: "1.0"
+namespace: wippy.session.env
+
+entries:
+  - name: database_resource
+    kind: env.variable
+    meta:
+      comment: Database resource for session storage
+      icon: tabler:database
+      private: true
+    storage: app.env:router
+    variable: SESSION_DATABASE_RESOURCE
+
+  - name: token_checkpoint_threshold
+    kind: env.variable
+    meta:
+      comment: Token count threshold for creating conversation checkpoints
+      icon: tabler:checkpoint
+      private: true
+    storage: app.env:router
+    variable: SESSION_TOKEN_CHECKPOINT_THRESHOLD
+
+  - name: max_message_limit
+    kind: env.variable
+    meta:
+      comment: Maximum messages to load for prompt building
+      icon: tabler:list
+      private: true
+    storage: app.env:router
+    variable: SESSION_MAX_MESSAGE_LIMIT
+
+  - name: checkpoint_function_id
+    kind: env.variable
+    meta:
+      comment: Function ID for generating checkpoint summaries (checkpoints enabled when set)
+      icon: tabler:summary
+      private: true
+    storage: app.env:router
+    variable: SESSION_CHECKPOINT_FUNCTION_ID
+
+  - name: title_function_id
+    kind: env.variable
+    meta:
+      comment: Function ID for generating session titles (automatic titles enabled when set)
+      icon: tabler:heading
+      private: true
+    storage: app.env:router
+    variable: SESSION_TITLE_FUNCTION_ID
+
+  - name: default_host
+    kind: env.variable
+    meta:
+      comment: Default host for session processes
+      icon: tabler:server
+      private: true
+    storage: app.env:router
+    variable: SESSION_DEFAULT_HOST
+
+  - name: session_security_scope
+    kind: env.variable
+    meta:
+      comment: Security scope for session processes
+      icon: tabler:shield
+      private: true
+    storage: app.env:router
+    variable: SESSION_SECURITY_SCOPE
+
+  - name: gc_interval
+    kind: env.variable
+    meta:
+      comment: Garbage collection interval for session cleanup
+      icon: tabler:clock
+      private: true
+    storage: app.env:router
+    variable: SESSION_GC_INTERVAL
+
+  - name: delegation_func_id
+    kind: env.variable
+    meta:
+      comment: Function ID for delegation calls (delegation enabled when set)
+      icon: tabler:function
+      private: true
+    storage: app.env:router
+    variable: SESSION_DELEGATION_FUNC_ID

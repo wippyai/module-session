@@ -1,14 +1,14 @@
 local sql = require("sql")
 local json = require("json")
 local time = require("time")
-local env = require("env")
+local consts = require("consts")
 
 -- Constants
 local session_contexts_repo = {}
 
 -- Get a database connection
 local function get_db()
-    local DB_RESOURCE, _ = env.get("wippy.session:env-target_db")
+    local DB_RESOURCE, _ = consts.get_db_resource()
 
     local db, err = sql.get(DB_RESOURCE)
     if err then

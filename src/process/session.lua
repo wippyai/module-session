@@ -1,301 +1,270 @@
 local json = require("json")
-local actor = require("actor")
 local consts = require("consts")
-local loader = require("loader")
-local controller = require("controller")
-local session_state = require("session_state")
-local session_upstream = require("session_upstream")
-local session_context = require("session_context")
-local llm = require("llm")
-local prompt = require("prompt")
-
-local STATUS = consts.STATUS
-local TOPICS = consts.TOPICS
-local ERROR_CODE = consts.ERROR_CODE
-local ERR = consts.ERR
-local TASK_TYPE = consts.TASK_TYPE
+local reader = require("reader")
+local writer = require("writer")
+local upstream = require("upstream")
+local command_bus = require("command_bus")
+local message_handlers = require("message_handlers")
+local control_handlers = require("control_handlers")
+local session_handlers = require("session_handlers")
+local agent_context = require("agent_context")
+local tools = require("tools")
 
 local function run(args)
     if not args or not args.user_id or not args.session_id then
-        error(ERR.MISSING_ARGS)
+        error(consts.ERR.MISSING_ARGS)
     end
 
-    local loader_state, err
-    if args.create then
-        if not args.start_token then
-            error(ERR.MISSING_TOKEN)
-        end
-        loader_state, err = loader.create_session(args)
-    else
-        loader_state, err = loader.load_session(args)
-    end
-
+    local session_reader, err = reader.open(args.session_id)
     if err then
-        error(err)
+        error("Failed to open session: " .. err)
     end
 
-    local session_status = loader_state.status or STATUS.IDLE
-
-    local state = session_state.new(loader_state)
-    local ctx_manager = session_context.new(loader_state.primary_context_id)
-    local upstream = session_upstream.new(args.session_id, args.conn_pid, args.parent_pid)
-    local convo_controller = controller.new(state, upstream, ctx_manager)
-
-    local function set_session_status(new_status, error_msg)
-        session_status = new_status
-        state:update_session_status(new_status, error_msg)
-
-        if error_msg then
-            upstream:session_error(new_status == STATUS.FAILED and ERROR_CODE.FAILED or ERROR_CODE.ERROR, error_msg)
-        else
-            upstream:update_session({ status = new_status })
-        end
+    local session_data = session_reader:state()
+    if session_data.status == consts.STATUS.FAILED then
+        error("Cannot open failed session")
     end
 
-    -- Function to check for and process any pending work in the controller
-    local function check_next_work()
-        if convo_controller:has_next() then
-            return actor.next(TOPICS.CONTINUE)
-        end
-        return nil
+    local session_writer, writer_err = writer.new(args.session_id)
+    if not session_writer then
+        error("Failed to create session writer: " .. writer_err)
     end
 
-    if session_status == STATUS.FAILED then
-        upstream:session_error(ERROR_CODE.FAILED, ERR.INIT_FAILED)
-        error("Unable to open failed session")
-    end
+    local session_upstream = upstream.new(args.session_id, args.conn_pid, args.parent_pid)
 
-    if args.create and loader_state.meta and loader_state.meta.agent then
-        local success, init_err = convo_controller:init(
-            loader_state.meta.agent,
-            loader_state.meta.model
-        )
-
-        if not success then
-            session_status = STATUS.FAILED
-            upstream:session_error(ERROR_CODE.FAILED, init_err)
-            error(init_err)
-        end
-    end
-
-    if args.create and loader_state.init_function then
-        convo_controller.task_queue:enqueue({
-            type = TASK_TYPE.EXECUTE_FUNCTION,
-            function_id = loader_state.init_function.name,
-            function_params = loader_state.init_function.params
-        })
-    end
-
-    upstream:update_session({
-        agent = loader_state.meta and loader_state.meta.agent,
-        model = loader_state.meta and loader_state.meta.model,
-        status = session_status,
-        last_message_date = loader_state.last_message_date,
-        public_meta = loader_state.public_meta
+    -- Initialize agent context using session config
+    local agent_ctx = agent_context.new({
+        enable_cache = session_data.config.enable_agent_cache,
+        context = {}
     })
 
-    local title_requested = false
-    local function generate_title()
-        if title_requested then
-            return
-        end
-        title_requested = true
-
-        -- Load recent messages from the session for context
-        local messages, err = state:load_messages(5)
-        if err then
-            return false, "Failed to load messages: " .. err
+    -- Configure delegation if enabled
+    if  session_data.config.delegation_func_id then
+        -- Load delegation schema from registry like the old system
+        local delegation_schema = nil
+        local tool_schema, schema_err = tools.get_tool_schema(session_data.config.delegation_func_id)
+        if tool_schema and tool_schema.schema then
+            delegation_schema = tool_schema.schema
         end
 
-        -- Create a prompt for title generation
-        local builder = prompt.new()
-        builder:add_system(
-            "You are a helpful assistant that generates concise, descriptive titles for conversations. Create a short title (3-5 words) that captures the main topic or purpose of this conversation.")
-
-        -- Add the first few messages to provide context
-        for i, msg in ipairs(messages) do
-            if msg.type == "user" then
-                builder:add_user(msg.data)
-            elseif msg.type == "assistant" then
-                builder:add_assistant(msg.data)
-            end
-
-            -- Only include up to 3 messages for context
-            if i >= 3 then
-                break
-            end
-        end
-
-        -- Add the specific instruction for generating a title
-        builder:add_user("Based on the conversation above, generate a short, descriptive title.")
-
-        -- Call the LLM to generate a title
-        local response, err = llm.generate(builder, {
-            model = "gpt-4o-mini", -- Use session's model or fallback
-            options = {
-                temperature = 0.7,
-                max_tokens = 50 -- Keep response short
-            }
+        agent_ctx:configure_delegate_tools({
+            enabled = true,
+            description_suffix = session_data.config.delegation_description_suffix,
+            default_schema = delegation_schema
         })
-
-        if err then
-            return false, "Title generation failed: " .. err
-        end
-
-        if response.error then
-            return false, "Title generation failed: " .. response.error_message
-        end
-
-        -- Clean up the response to get just the title
-        local title = response.result:gsub("^[%s\"']*(.-)%s*[%s\"']*$", "%1")
-
-        -- Ensure the title isn't too long
-        if #title > 50 then
-            title = title:sub(1, 47) .. "..."
-        end
-
-        -- Update title in state
-        local success, err = state:update_session_title(title)
-        if not success then
-            return false, err
-        end
-
-        -- Notify clients about title update
-        upstream:update_session({
-            title = title
-        })
-
-        return true
     end
+
+    local context = {
+        session_id = args.session_id,
+        user_id = args.user_id,
+        reader = session_reader,
+        writer = session_writer,
+        upstream = session_upstream,
+        config = session_data.config,
+        agent_ctx = agent_ctx
+    }
+
+    local bus = command_bus.new(context)
+
+    -- Create intercept handler that receives next_ops for flexible logic
+    local function intercept_handler(ctx, op)
+        -- Reset session status to idle
+        ctx.writer:update_status(consts.STATUS.IDLE)
+        ctx.upstream:update_session({ status = consts.STATUS.IDLE })
+
+        return {
+            completed = true,
+            intercepted = true,
+            intercepted_count = #op.intercepted_ops
+        }
+    end
+
+    -- Mount all operation handlers
+    bus:mount_op_handler(consts.OP_TYPE.HANDLE_MESSAGE, message_handlers.handle_message)
+    bus:mount_op_handler(consts.OP_TYPE.AGENT_STEP, message_handlers.agent_step)
+    bus:mount_op_handler(consts.OP_TYPE.PROCESS_TOOLS, message_handlers.process_tools)
+    bus:mount_op_handler(consts.OP_TYPE.AGENT_CONTINUE, message_handlers.agent_continue)
+
+    bus:mount_op_handler(consts.OP_TYPE.CONTROL_ARTIFACTS, control_handlers.control_artifacts)
+    bus:mount_op_handler(consts.OP_TYPE.CONTROL_CONTEXT, control_handlers.control_context)
+    bus:mount_op_handler(consts.OP_TYPE.CONTROL_MEMORY, control_handlers.control_memory)
+    bus:mount_op_handler(consts.OP_TYPE.CONTROL_CONFIG, control_handlers.control_config)
+
+    -- Mount context command handler
+    bus:mount_op_handler(consts.OP_TYPE.HANDLE_CONTEXT_COMMAND, control_handlers.handle_context_command)
+
+    bus:mount_op_handler(consts.OP_TYPE.AGENT_CHANGE, session_handlers.agent_change)
+    bus:mount_op_handler(consts.OP_TYPE.MODEL_CHANGE, session_handlers.model_change)
+    bus:mount_op_handler(consts.OP_TYPE.GENERATE_TITLE, session_handlers.generate_title)
+    bus:mount_op_handler(consts.OP_TYPE.CREATE_CHECKPOINT, session_handlers.create_checkpoint)
+    bus:mount_op_handler(consts.OP_TYPE.CHECK_BACKGROUND_TRIGGERS, session_handlers.check_background_triggers)
+    bus:mount_op_handler(consts.OP_TYPE.EXECUTE_FUNCTION, session_handlers.execute_function)
+
+    if args.create then
+        session_writer:update_status(consts.STATUS.IDLE)
+
+        if session_data.config.agent_id and session_data.config.agent_id ~= "" then
+            bus:queue_op({
+                type = consts.OP_TYPE.AGENT_CHANGE,
+                agent_id = session_data.config.agent_id,
+                init = true
+            })
+        end
+
+        if session_data.config.model and session_data.config.model ~= "" then
+            bus:queue_op({
+                type = consts.OP_TYPE.MODEL_CHANGE,
+                model = session_data.config.model,
+                init = true
+            })
+        end
+
+        -- Execute initialization function if provided by plugin
+        if args.init_function then
+            bus:queue_op({
+                type = consts.OP_TYPE.EXECUTE_FUNCTION,
+                function_id = args.init_function.name,
+                function_params = args.init_function.params
+            })
+        end
+    end
+
+    -- Send initial session data to client
+    session_upstream:update_session({
+        agent = session_data.config.agent_id,
+        model = session_data.config.model,
+        status = consts.STATUS.IDLE,
+        last_message_date = session_data.last_message_date,
+        public_meta = session_data.public_meta,
+    })
 
     process.registry.register("session." .. args.session_id)
 
-    local handlers = {
-        __on_cancel = function(actor_state)
-            print("session exits")
-            convo_controller:cancel()
-            return actor.exit({ status = "shutdown" })
-        end,
+    local session_state = { stopping = false }
+    local bus_done = channel.new()
 
-        __default = function(actor_state, payload)
-            print("unhandled message:", json.encode(payload))
-            return actor_state
-        end,
+    -- Start command bus in separate coroutine
+    coroutine.spawn(function()
+        local _, bus_err = bus:run()
+        if bus_err then
+            print("Command bus error:", bus_err)
+        end
+        bus_done:send(true)
+    end)
 
-        [TOPICS.MESSAGE] = function(actor_state, payload)
-            if not payload or not payload.data then
-                return actor_state
-            end
+    local inbox = process.inbox()
+    local events = process.events()
 
-            if session_status == STATUS.FAILED then
-                upstream:session_error(ERROR_CODE.FAILED, ERR.FAILED_STATE)
-                return actor_state
-            end
+    while not session_state.stopping do
+        local result = channel.select({
+            inbox:case_receive(),
+            events:case_receive()
+        })
 
-            if session_status == STATUS.RUNNING then
-                upstream:session_error(ERROR_CODE.BUSY, ERR.BUSY)
-                return actor_state
-            end
+        if not result.ok then
+            break
+        end
 
-            if payload.conn_pid then
-                upstream.conn_pid = payload.conn_pid
-            end
+        if result.channel == inbox then
+            local msg = result.value
+            local topic = msg:topic()
+            local payload = msg:payload()
 
-            local result, err = convo_controller:handle_message(payload.data)
-
-            if not result then
-                if err then
-                    upstream:session_error(ERROR_CODE.ERROR, err)
-                end
-                return actor_state
-            end
-
-            return check_next_work()
-        end,
-
-        [TOPICS.COMMAND] = function(actor_state, payload, topic, from)
-            if not payload or not payload.command then
-                return actor_state
-            end
-
-            if payload.conn_pid then
-                upstream.conn_pid = payload.conn_pid
-            end
-
-            if session_status == STATUS.FAILED then
-                upstream:session_error(ERROR_CODE.FAILED, ERR.FAILED_COMMANDS)
-                return actor_state
-            end
-
-            local success, err
-
-            payload.from_pid = from
-
-            -- Handle special session-level commands directly
-            if payload.command == TOPICS.CONTEXT then
-                success, err = ctx_manager:handle_command(payload)
-                if success then
-                    -- we do no announce this commands normally, they are not public
-                    return actor_state
-                end
-            else
-                -- Pass other commands to controller
-                success, err = convo_controller:handle_command(payload.command, payload)
-            end
-
-            if not success then
-                if payload.request_id then
-                    upstream:command_error(payload.request_id, ERROR_CODE.ERROR, err or "Command failed")
+            if topic == consts.TOPICS.MESSAGE then
+                local payload_data = payload:data()
+                if payload_data.conn_pid then
+                    session_upstream.conn_pid = payload_data.conn_pid
                 end
 
-                upstream:session_error(ERROR_CODE.ERROR, err or "Command failed")
-                return actor_state
-            end
-
-            if payload.request_id then
-                upstream:command_success(payload.request_id)
-            end
-
-            -- Check if we need to continue processing
-            return check_next_work()
-        end,
-
-        [TOPICS.CONTINUE] = function(actor_state, payload)
-            if session_status == STATUS.FAILED then
-                return actor_state
-            end
-
-            set_session_status(STATUS.RUNNING)
-
-            actor_state.async(function()
-                local result, err = convo_controller:process_next()
-                if err then
-                    print("error in processing:", err)
-                    set_session_status(STATUS.ERROR, err)
+                bus:queue_op({
+                    type = consts.OP_TYPE.HANDLE_MESSAGE,
+                    data = payload_data.data,
+                    request_id = payload_data.request_id
+                })
+            elseif topic == consts.TOPICS.COMMAND then
+                local payload_data = payload:data()
+                if payload_data.conn_pid then
+                    session_upstream.conn_pid = payload_data.conn_pid
                 end
 
-                -- If message was successful and we have enough messages, start title generation
-                if result and state.total_message_count >= 5
-                    and (not state.title or state.title == "")
-                    and not title_requested then
-                    actor_state.async(generate_title)
+                -- Handle special context commands (like old system)
+                if payload_data.command == consts.COMMANDS.CONTEXT then
+                    -- Context commands are not public and handled directly
+                    bus:queue_op({
+                        type = consts.OP_TYPE.HANDLE_CONTEXT_COMMAND,
+                        action = payload_data.action,
+                        key = payload_data.key,
+                        data = payload_data.data,
+                        from_pid = payload_data.from_pid,
+                        request_id = payload_data.request_id
+                    })
+                elseif payload_data.command == consts.COMMANDS.STOP then
+                    bus:intercept(intercept_handler)
+                elseif payload_data.command == consts.COMMANDS.AGENT then
+                    if payload_data.name then
+                        bus:queue_op({
+                            type = consts.OP_TYPE.AGENT_CHANGE,
+                            agent_id = payload_data.name,
+                            request_id = payload_data.request_id
+                        })
+                    end
+                elseif payload_data.command == consts.COMMANDS.MODEL then
+                    if payload_data.name then
+                        bus:queue_op({
+                            type = consts.OP_TYPE.MODEL_CHANGE,
+                            model = payload_data.name,
+                            request_id = payload_data.request_id
+                        })
+                    end
+                elseif payload_data.command == consts.COMMANDS.ARTIFACT then
+                    if payload_data.artifact_id then
+                        -- Reference existing artifact (legacy compatibility)
+                        local message_id, err = session_writer:add_message(consts.MSG_TYPE.ARTIFACT, "", {
+                            artifact_id = payload_data.artifact_id
+                        })
+
+                        if err then
+                            session_upstream:command_error(payload_data.request_id, consts.ERROR_CODES.STORAGE_ERROR, "Failed to reference artifact")
+                        else
+                            session_upstream:send_message_update(message_id, "artifact", {
+                                message_id = message_id,
+                                artifact_id = payload_data.artifact_id
+                            })
+                            session_upstream:command_success(payload_data.request_id)
+                        end
+                    elseif payload_data.artifacts then
+                        -- Create new artifacts (current system)
+                        bus:queue_op({
+                            type = consts.OP_TYPE.CONTROL_ARTIFACTS,
+                            artifacts = payload_data.artifacts,
+                            request_id = payload_data.request_id
+                        })
+                    else
+                        session_upstream:command_error(payload_data.request_id, consts.ERROR_CODES.INVALID_JSON, "Either artifact_id or artifacts array required")
+                    end
                 end
+            elseif topic == consts.TOPICS.CONTINUE then
+                print("Continue signal received")
+            elseif topic == consts.TOPICS.STOP then
+                bus:intercept(intercept_handler)
+            end
+        elseif result.channel == events then
+            local event = result.value
 
-                -- Check if we still have pending work
-                if convo_controller:has_next() then
-                    -- Keep status as RUNNING and continue with next task
-                    return actor.next(TOPICS.CONTINUE, true)
-                else
-                    -- No more work, set status to IDLE
-                    set_session_status(STATUS.IDLE)
-                end
-            end)
+            if event.kind == process.event.CANCEL then
+                session_state.stopping = true
+                bus:stop()
+                break
+            elseif event.kind == process.event.EXIT then
+                print("Child process exited:", event.from)
+            elseif event.kind == process.event.LINK_DOWN then
+                print("Linked process failed:", event.from)
+            end
+        end
+    end
 
-            return actor_state
-        end,
-    }
-
-    return actor.new(loader_state, handlers).run()
+    bus_done:receive()
+    return { status = "shutdown", session_id = args.session_id }
 end
 
 return { run = run }
