@@ -1,24 +1,54 @@
 local sql = require("sql")
 local json = require("json")
 local time = require("time")
-local env = require("env")
+local consts = require("consts")
 
 -- Constants
 local session_repo = {}
 
 -- Get a database connection
 local function get_db()
-    local DB_RESOURCE, _ = env.get("wippy.session:env-target_db")
-
-    local db, err = sql.get(DB_RESOURCE)
+    local db_resource = consts.get_db_resource()
+    local db, err = sql.get(db_resource)
     if err then
         return nil, "Failed to connect to database: " .. err
     end
     return db
 end
 
+-- Count sessions by user ID
+function session_repo.count_by_user(user_id)
+    if not user_id or user_id == "" then
+        return nil, "User ID is required"
+    end
+
+    local db, err = get_db()
+    if err then
+        return nil, err
+    end
+
+    local query = sql.builder.select("COUNT(*) as total")
+        :from("sessions")
+        :where("user_id = ?", user_id)
+
+    local executor = query:run_with(db)
+    local result, err = executor:query()
+
+    db:release()
+
+    if err then
+        return nil, "Failed to count sessions: " .. err
+    end
+
+    if #result == 0 then
+        return 0, nil
+    end
+
+    return result[1].total, nil
+end
+
 -- Create a new session
-function session_repo.create(session_id, user_id, primary_context_id, title, kind, current_model, current_agent)
+function session_repo.create(session_id, user_id, primary_context_id, title, kind, meta, config)
     if not session_id or session_id == "" then
         return nil, "Session ID is required"
     end
@@ -31,11 +61,22 @@ function session_repo.create(session_id, user_id, primary_context_id, title, kin
         return nil, "Primary context ID is required"
     end
 
-    -- Default values for optional parameters
+    -- Default values
     title = title or ""
     kind = kind or "default"
-    current_model = current_model or ""
-    current_agent = current_agent or ""
+    meta = meta or {}
+    config = config or {}
+
+    -- Encode JSON fields
+    local encoded_meta, err = json.encode(meta)
+    if err then
+        return nil, "Failed to encode meta: " .. err
+    end
+
+    local encoded_config, err = json.encode(config)
+    if err then
+        return nil, "Failed to encode config: " .. err
+    end
 
     local db, err = get_db()
     if err then
@@ -44,22 +85,20 @@ function session_repo.create(session_id, user_id, primary_context_id, title, kin
 
     local now = time.now():format(time.RFC3339)
 
-    -- Build the INSERT query
     local query = sql.builder.insert("sessions")
-
         :set_map({
             session_id = session_id,
             user_id = user_id,
             primary_context_id = primary_context_id,
             title = title,
             kind = kind,
-            current_model = current_model,
-            current_agent = current_agent,
+            meta = encoded_meta,
+            config = encoded_config,
+            public_meta = '{}',
             start_date = now,
             last_message_date = now
         })
 
-    -- Execute the query
     local executor = query:run_with(db)
     local result, err = executor:exec()
 
@@ -75,16 +114,16 @@ function session_repo.create(session_id, user_id, primary_context_id, title, kin
         primary_context_id = primary_context_id,
         title = title,
         kind = kind,
-        current_model = current_model,
-        current_agent = current_agent,
-        public_meta = {}, -- Return empty table for public_meta
+        meta = meta,
+        config = config,
+        public_meta = {},
         start_date = now,
         last_message_date = now
     }
 end
 
--- Get a session by ID
-function session_repo.get(session_id)
+-- Get a session by ID filtered by user_id
+function session_repo.get(session_id, user_id)
     if not session_id or session_id == "" then
         return nil, "Session ID is required"
     end
@@ -94,17 +133,14 @@ function session_repo.get(session_id)
         return nil, err
     end
 
-    -- Build the SELECT query
     local query = sql.builder.select(
             "session_id", "user_id", "status", "primary_context_id",
-            "title", "kind", "current_model", "current_agent",
-            "public_meta", "start_date", "last_message_date"
+            "title", "kind", "meta", "config", "public_meta", "start_date", "last_message_date"
         )
         :from("sessions")
         :where("session_id = ?", session_id)
         :limit(1)
 
-    -- Execute the query
     local executor = query:run_with(db)
     local sessions, err = executor:query()
 
@@ -118,14 +154,40 @@ function session_repo.get(session_id)
         return nil, "Session not found"
     end
 
-    -- Parse public_meta from JSON string to table
     local session = sessions[1]
+
+    if user_id and session.user_id ~= user_id then
+        return nil, "Session not found"
+    end
+
+    -- Parse JSON fields
+    if session.meta and session.meta ~= "" then
+        local decoded, err = json.decode(session.meta)
+        if not err then
+            session.meta = decoded
+        else
+            session.meta = {}
+        end
+    else
+        session.meta = {}
+    end
+
+    if session.config and session.config ~= "" then
+        local decoded, err = json.decode(session.config)
+        if not err then
+            session.config = decoded
+        else
+            session.config = {}
+        end
+    else
+        session.config = {}
+    end
+
     if session.public_meta and session.public_meta ~= "" then
         local decoded, err = json.decode(session.public_meta)
         if not err then
             session.public_meta = decoded
         else
-            -- Fallback to empty table if JSON parsing fails
             session.public_meta = {}
         end
     else
@@ -146,17 +208,14 @@ function session_repo.list_by_user(user_id, limit, offset)
         return nil, err
     end
 
-    -- Build the SELECT query
     local query = sql.builder.select(
             "session_id", "user_id", "status", "primary_context_id",
-            "title", "kind", "current_model", "current_agent",
-            "public_meta", "start_date", "last_message_date"
+            "title", "kind", "meta", "config", "public_meta", "start_date", "last_message_date"
         )
         :from("sessions")
         :where("user_id = ?", user_id)
         :order_by("last_message_date DESC")
 
-    -- Add limit and offset if provided
     if limit and limit > 0 then
         query = query:limit(limit)
         if offset and offset > 0 then
@@ -164,7 +223,6 @@ function session_repo.list_by_user(user_id, limit, offset)
         end
     end
 
-    -- Execute the query
     local executor = query:run_with(db)
     local sessions, err = executor:query()
 
@@ -174,14 +232,35 @@ function session_repo.list_by_user(user_id, limit, offset)
         return nil, "Failed to list sessions: " .. err
     end
 
-    -- Parse public_meta for each session
+    -- Parse JSON fields for each session
     for i, session in ipairs(sessions) do
+        if session.meta and session.meta ~= "" then
+            local decoded, err = json.decode(session.meta)
+            if not err then
+                session.meta = decoded
+            else
+                session.meta = {}
+            end
+        else
+            session.meta = {}
+        end
+
+        if session.config and session.config ~= "" then
+            local decoded, err = json.decode(session.config)
+            if not err then
+                session.config = decoded
+            else
+                session.config = {}
+            end
+        else
+            session.config = {}
+        end
+
         if session.public_meta and session.public_meta ~= "" then
             local decoded, err = json.decode(session.public_meta)
             if not err then
                 session.public_meta = decoded
             else
-                -- Fallback to empty table if JSON parsing fails
                 session.public_meta = {}
             end
         else
@@ -192,177 +271,7 @@ function session_repo.list_by_user(user_id, limit, offset)
     return sessions
 end
 
--- Update session title
-function session_repo.update_title(session_id, title)
-    if not session_id or session_id == "" then
-        return nil, "Session ID is required"
-    end
-
-    if not title then
-        title = "" -- Default to empty string if title is nil
-    end
-
-    local db, err = get_db()
-    if err then
-        return nil, err
-    end
-
-    -- Check if session exists
-    local check_query = sql.builder.select("session_id")
-        :from("sessions")
-        :where("session_id = ?", session_id)
-
-    local check_executor = check_query:run_with(db)
-    local sessions, err = check_executor:query()
-
-    if err then
-        db:release()
-        return nil, "Failed to check if session exists: " .. err
-    end
-
-    if #sessions == 0 then
-        db:release()
-        return nil, "Session not found"
-    end
-
-    -- Update session title
-    local update_query = sql.builder.update("sessions")
-
-        :set("title", title)
-        :where("session_id = ?", session_id)
-
-    local update_executor = update_query:run_with(db)
-    local result, err = update_executor:exec()
-
-    db:release()
-
-    if err then
-        return nil, "Failed to update session title: " .. err
-    end
-
-    return {
-        session_id = session_id,
-        title = title,
-        updated = true
-    }
-end
-
--- Update session public metadata
-function session_repo.update_public_meta(session_id, public_meta)
-    if not session_id or session_id == "" then
-        return nil, "Session ID is required"
-    end
-
-    -- Default to empty table if public_meta is nil
-    public_meta = public_meta or {}
-
-    -- Encode the table as JSON
-    local encoded_meta, err = json.encode(public_meta)
-    if err then
-        return nil, "Failed to encode public_meta to JSON: " .. err
-    end
-
-    local db, err = get_db()
-    if err then
-        return nil, err
-    end
-
-    -- Check if session exists
-    local check_query = sql.builder.select("session_id")
-        :from("sessions")
-        :where("session_id = ?", session_id)
-
-    local check_executor = check_query:run_with(db)
-    local sessions, err = check_executor:query()
-
-    if err then
-        db:release()
-        return nil, "Failed to check if session exists: " .. err
-    end
-
-    if #sessions == 0 then
-        db:release()
-        return nil, "Session not found"
-    end
-
-    -- Update session public metadata
-    local update_query = sql.builder.update("sessions")
-
-        :set("public_meta", encoded_meta)
-        :where("session_id = ?", session_id)
-
-    local update_executor = update_query:run_with(db)
-    local result, err = update_executor:exec()
-
-    db:release()
-
-    if err then
-        return nil, "Failed to update session public metadata: " .. err
-    end
-
-    return {
-        session_id = session_id,
-        public_meta = public_meta, -- Return the original table
-        updated = true
-    }
-end
-
--- Update last message date
-function session_repo.update_last_message_date(session_id, date)
-    if not session_id or session_id == "" then
-        return nil, "Session ID is required"
-    end
-
-    -- Default to current time if date not provided
-    date = date or os.time()
-    date = time.unix(date, 0):format(time.RFC3339)
-
-    local db, err = get_db()
-    if err then
-        return nil, err
-    end
-
-    -- Check if session exists
-    local check_query = sql.builder.select("session_id")
-        :from("sessions")
-        :where("session_id = ?", session_id)
-
-    local check_executor = check_query:run_with(db)
-    local sessions, err = check_executor:query()
-
-    if err then
-        db:release()
-        return nil, "Failed to check if session exists: " .. err
-    end
-
-    if #sessions == 0 then
-        db:release()
-        return nil, "Session not found"
-    end
-
-    -- Use sql.builder.expr to handle the timestamp properly
-    local update_query = sql.builder.update("sessions")
-
-        :set("last_message_date", date)
-        :where("session_id = ?", session_id)
-
-    local update_executor = update_query:run_with(db)
-    local result, err = update_executor:exec()
-
-    db:release()
-
-    if err then
-        return nil, "Failed to update last message date: " .. err
-    end
-
-    return {
-        session_id = session_id,
-        last_message_date = date,
-        updated = true
-    }
-end
-
--- Update session metadata (model, agent, public_meta, and last_message_date) in a single transaction
+-- Update session metadata (title, meta, config, public_meta, status, last_message_date)
 function session_repo.update_session_meta(session_id, updates)
     if not session_id or session_id == "" then
         return nil, "Session ID is required"
@@ -399,56 +308,63 @@ function session_repo.update_session_meta(session_id, updates)
     local update_query = sql.builder.update("sessions")
     local result = { session_id = session_id, updated = true }
 
-    -- Add fields to update
-    if updates.current_model ~= nil then
-        update_query = update_query:set("current_model", updates.current_model)
-        result.current_model = updates.current_model
-    end
-
-    if updates.current_agent ~= nil then
-        update_query = update_query:set("current_agent", updates.current_agent)
-        result.current_agent = updates.current_agent
-    end
-
+    -- Handle individual field updates
     if updates.title ~= nil then
         update_query = update_query:set("title", updates.title)
         result.title = updates.title
     end
 
-    if updates.public_meta ~= nil then
-        -- Encode public_meta table to JSON
-        local encoded_meta, err = json.encode(updates.public_meta)
+    if updates.status ~= nil then
+        update_query = update_query:set("status", updates.status)
+        result.status = updates.status
+    end
+
+    if updates.kind ~= nil then
+        update_query = update_query:set("kind", updates.kind)
+        result.kind = updates.kind
+    end
+
+    if updates.meta ~= nil then
+        local encoded_meta, err = json.encode(updates.meta)
         if err then
             db:release()
-            return nil, "Failed to encode public_meta to JSON: " .. err
+            return nil, "Failed to encode meta: " .. err
         end
-
-        update_query = update_query:set("public_meta", encoded_meta)
-        result.public_meta = updates.public_meta -- Keep original table in result
+        update_query = update_query:set("meta", encoded_meta)
+        result.meta = updates.meta
     end
 
-    -- Always update last_message_date if requested or if any other field is updated
-    if updates.last_message_date ~= nil or updates.current_model ~= nil or
-        updates.current_agent ~= nil or updates.title ~= nil or updates.public_meta ~= nil then
-        local date
-        if updates.last_message_date == nil then
-            date = time.now():format(time.RFC3339)
-        else
-            date = time.unix(updates.last_message_date, 0):format(time.RFC3339)
+    if updates.config ~= nil then
+        local encoded_config, err = json.encode(updates.config)
+        if err then
+            db:release()
+            return nil, "Failed to encode config: " .. err
         end
-
-        update_query = update_query:set("last_message_date", date)
-        result.last_message_date = date
+        update_query = update_query:set("config", encoded_config)
+        result.config = updates.config
     end
 
-    -- If nothing to update, return early
-    if not result.current_model and not result.current_agent and
-        not result.title and not result.public_meta and not result.last_message_date then
-        db:release()
-        return result
+    if updates.public_meta ~= nil then
+        local encoded_public_meta, err = json.encode(updates.public_meta)
+        if err then
+            db:release()
+            return nil, "Failed to encode public_meta: " .. err
+        end
+        update_query = update_query:set("public_meta", encoded_public_meta)
+        result.public_meta = updates.public_meta
     end
 
-    -- Add WHERE clause for session_id
+    -- Always update last_message_date if any field is updated
+    local date
+    if updates.last_message_date ~= nil then
+        date = time.unix(updates.last_message_date, 0):format(time.RFC3339)
+    else
+        date = time.now():format(time.RFC3339)
+    end
+    update_query = update_query:set("last_message_date", date)
+    result.last_message_date = date
+
+    -- Add WHERE clause
     update_query = update_query:where("session_id = ?", session_id)
 
     -- Execute the query
@@ -495,6 +411,13 @@ function session_repo.delete(session_id)
         return nil, "Failed to delete session artifacts: " .. err
     end
 
+    -- Delete session contexts
+    local contexts_delete_query = sql.builder.delete("session_contexts")
+        :where("session_id = ?", session_id)
+
+    local contexts_delete_executor = contexts_delete_query:run_with(tx)
+    result, err = contexts_delete_executor:exec()
+
     if err then
         tx:rollback()
         db:release()
@@ -527,7 +450,6 @@ function session_repo.delete(session_id)
         return nil, "Failed to delete session: " .. err
     end
 
-    -- Check if session was found
     if result.rows_affected == 0 then
         tx:rollback()
         db:release()

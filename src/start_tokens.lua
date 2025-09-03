@@ -1,9 +1,48 @@
 local crypto = require("crypto")
 local base64 = require("base64")
 local json = require("json")
+local consts = require("consts")
 
--- Hardcoded encryption key - in production this should be securely managed
-local START_TOKEN_KEY = "Chat_StartToken_Secret_Key_____1" -- todo: move to config
+-- Convert hex string to bytes
+local function hex_decode(hex_str)
+    if not hex_str or #hex_str % 2 ~= 0 then
+        return nil, "Invalid hex string"
+    end
+
+    local bytes = ""
+    for i = 1, #hex_str, 2 do
+        local hex_byte = hex_str:sub(i, i + 1)
+        local byte_val = tonumber(hex_byte, 16)
+        if not byte_val then
+            return nil, "Invalid hex character"
+        end
+        bytes = bytes .. string.char(byte_val)
+    end
+    return bytes
+end
+
+-- Get encryption key from environment configuration
+local function get_encryption_key()
+    local config = consts.get_config()
+    local key_hex = config.encryption_key
+
+    if not key_hex then
+        error("ENCRYPTION_KEY environment variable is required but not set")
+    end
+
+    -- Decode hex string to get the actual 32-byte key
+    local key, err = hex_decode(key_hex)
+    if err then
+        error("Failed to decode encryption key: " .. err)
+    end
+
+    -- Verify key length
+    if #key ~= 16 and #key ~= 24 and #key ~= 32 then
+        error("Encryption key must be 16, 24, or 32 bytes after decoding, got " .. #key)
+    end
+
+    return key
+end
 
 -- Pack session parameters table into an encrypted start token
 local function pack_start_token(params)
@@ -20,7 +59,8 @@ local function pack_start_token(params)
         kind = params.kind or "",
         issued_at = os.time(),
         start_func = params.start_func,
-        start_params = params.start_params
+        start_params = params.start_params,
+        context = params.context
     }
 
     -- Serialize to JSON
@@ -29,8 +69,11 @@ local function pack_start_token(params)
         return nil, "Failed to encode payload: " .. err
     end
 
+    -- Get encryption key from environment
+    local encryption_key = get_encryption_key()
+
     -- Encrypt the payload using AES-GCM from the crypto module
-    local encrypted, err = crypto.encrypt.aes(json_data, START_TOKEN_KEY)
+    local encrypted, err = crypto.encrypt.aes(json_data, encryption_key)
     if err then
         return nil, "Encryption error: " .. err
     end
@@ -49,8 +92,11 @@ local function unpack_start_token(token)
         return nil, "Invalid token format"
     end
 
+    -- Get encryption key from environment
+    local encryption_key = get_encryption_key()
+
     -- Decrypt the data
-    local json_data, err = crypto.decrypt.aes(encrypted_data, START_TOKEN_KEY)
+    local json_data, err = crypto.decrypt.aes(encrypted_data, encryption_key)
     if err then
         return nil, "Invalid start token: " .. err
     end

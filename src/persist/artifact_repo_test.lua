@@ -7,7 +7,7 @@ local session_repo = require("session_repo")
 local context_repo = require("context_repo")
 local time = require("time")
 local security = require("security")
-local env = require("env")
+local consts = require("consts")
 
 local function define_tests()
     describe("Artifact Repository", function()
@@ -56,7 +56,7 @@ local function define_tests()
         -- Clean up test data after all tests
         after_all(function()
             -- Get a database connection for cleanup
-            local db_resource, _ = env.get("wippy.session:env-target_db")
+            local db_resource, _ = consts.get_db_resource()
             local db, err = sql.get(db_resource)
             if err then
                 error("Failed to connect to database: " .. err)
@@ -268,6 +268,11 @@ local function define_tests()
             local artifact, err = artifact_repo.create(nil, test_data.session_id, "static", "title", "content")
             expect(artifact).to_be_nil()
             expect(err:match("Artifact ID is required")).not_to_be_nil()
+
+            -- Missing session_id
+            artifact, err = artifact_repo.create(uuid.v7(), "", "static", "title", "content")
+            expect(artifact).to_be_nil()
+            expect(err:match("Session ID is required")).not_to_be_nil()
 
             -- Missing kind
             artifact, err = artifact_repo.create(uuid.v7(), test_data.session_id, "", "title", "content")

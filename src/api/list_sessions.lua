@@ -10,7 +10,6 @@ local function handler()
         return nil, "Failed to get HTTP context"
     end
 
-    -- Security check - ensure user is authenticated
     local actor = security.actor()
     if not actor then
         res:set_status(http.STATUS.UNAUTHORIZED)
@@ -21,21 +20,27 @@ local function handler()
         return
     end
 
-    -- Get user ID from the authenticated actor
     local user_id = actor:id()
 
-    -- Get query parameters for pagination
     local limit = tonumber(req:query("limit")) or 20
     local offset = tonumber(req:query("offset")) or 0
 
-    -- Enforce limit constraints
     if limit > 100 then
         limit = 100
     elseif limit < 1 then
         limit = 1
     end
 
-    -- Get sessions for this user
+    local total_count, err = session_repo.count_by_user(user_id)
+    if err then
+        res:set_status(http.STATUS.INTERNAL_ERROR)
+        res:write_json({
+            success = false,
+            error = err
+        })
+        return
+    end
+
     local sessions, err = session_repo.list_by_user(user_id, limit, offset)
     if err then
         res:set_status(http.STATUS.INTERNAL_ERROR)
@@ -46,12 +51,21 @@ local function handler()
         return
     end
 
-    -- Return JSON response
+    for i, session in ipairs(sessions) do
+        session.current_agent = ""
+        session.current_model = ""
+
+        if session.config and type(session.config) == "table" then
+            session.current_agent = session.config.agent_id or ""
+            session.current_model = session.config.model or ""
+        end
+    end
+
     res:set_content_type(http.CONTENT.JSON)
     res:set_status(http.STATUS.OK)
     res:write_json({
         success = true,
-        count = #sessions,
+        count = total_count,
         sessions = sessions
     })
 end

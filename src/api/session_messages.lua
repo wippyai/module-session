@@ -39,7 +39,7 @@ local function handler()
     local user_id = actor:id()
 
     -- Verify session belongs to the authenticated user
-    local session, err = session_repo.get(session_id)
+    local session, err = session_repo.get(session_id, user_id)
     if err then
         res:set_status(http.STATUS.NOT_FOUND)
         res:write_json({

@@ -75,32 +75,19 @@ local function handler()
     end
 
     -- Get the session to check ownership
-    if artifact.session_id and artifact.session_id ~= "" then
-        local session, session_err = session_repo.get(artifact.session_id)
-        if session_err then
-            res:set_status(http.STATUS.INTERNAL_ERROR)
-            res:set_content_type(http.CONTENT.JSON)
-            res:write_json({
-                success = false,
-                error = "Failed to verify artifact ownership: " .. session_err
-            })
-            return
-        end
-
-        -- Verify the session belongs to the authenticated user
-        if session.user_id ~= user_id then
-            res:set_status(http.STATUS.FORBIDDEN)
-            res:set_content_type(http.CONTENT.JSON)
-            res:write_json({
-                success = false,
-                error = "Access denied: You don't have permission to access this artifact"
-            })
-            return
-        end
+    local session, session_err = session_repo.get(artifact.session_id)
+    if session_err then
+        res:set_status(http.STATUS.INTERNAL_ERROR)
+        res:set_content_type(http.CONTENT.JSON)
+        res:write_json({
+            success = false,
+            error = "Failed to verify artifact ownership: " .. session_err
+        })
+        return
     end
 
-    -- Verify the artifact belongs to the authenticated user
-    if artifact.user_id ~= user_id then
+    -- Verify the session belongs to the authenticated user
+    if session.user_id ~= user_id then
         res:set_status(http.STATUS.FORBIDDEN)
         res:set_content_type(http.CONTENT.JSON)
         res:write_json({
