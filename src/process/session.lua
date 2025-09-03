@@ -90,15 +90,13 @@ local function run(args)
     bus:mount_op_handler(consts.OP_TYPE.CONTROL_MEMORY, control_handlers.control_memory)
     bus:mount_op_handler(consts.OP_TYPE.CONTROL_CONFIG, control_handlers.control_config)
 
-    -- Mount context command handler
-    bus:mount_op_handler(consts.OP_TYPE.HANDLE_CONTEXT_COMMAND, control_handlers.handle_context_command)
-
     bus:mount_op_handler(consts.OP_TYPE.AGENT_CHANGE, session_handlers.agent_change)
     bus:mount_op_handler(consts.OP_TYPE.MODEL_CHANGE, session_handlers.model_change)
     bus:mount_op_handler(consts.OP_TYPE.GENERATE_TITLE, session_handlers.generate_title)
     bus:mount_op_handler(consts.OP_TYPE.CREATE_CHECKPOINT, session_handlers.create_checkpoint)
     bus:mount_op_handler(consts.OP_TYPE.CHECK_BACKGROUND_TRIGGERS, session_handlers.check_background_triggers)
     bus:mount_op_handler(consts.OP_TYPE.EXECUTE_FUNCTION, session_handlers.execute_function)
+    bus:mount_op_handler(consts.OP_TYPE.HANDLE_CONTEXT_COMMAND, control_handlers.handle_context_command)
 
     if args.create then
         session_writer:update_status(consts.STATUS.IDLE)

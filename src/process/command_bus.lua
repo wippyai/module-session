@@ -73,15 +73,9 @@ function command_bus:process_operation(op)
         if is_fatal then
             return nil, err
         else
+            -- Report error but don't change status - that's not the bus's job
             if self.context.upstream and op.request_id then
                 self.context.upstream:command_error(op.request_id, "HANDLER_ERROR", err)
-            end
-
-            if self.context.writer then
-                self.context.writer:update_status("idle")
-            end
-            if self.context.upstream then
-                self.context.upstream:update_session({ status = "idle" })
             end
 
             return { error_handled = true, error_message = err }, nil

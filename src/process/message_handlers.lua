@@ -175,27 +175,14 @@ function message_handlers.agent_step(ctx, op)
         })
     end
 
-    if (result.result and result.result ~= "") and (#unified_tool_calls == 0) then
+    -- Only set IDLE if no more operations are queued
+    if #next_ops == 0 then
         ctx.writer:update_status(consts.STATUS.IDLE)
         ctx.upstream:update_session({ status = consts.STATUS.IDLE })
-
         return {
             message_id = op.message_id,
             response_id = response_id,
-            completed = true,
-            next_ops = next_ops
-        }
-    end
-
-    if (not result.result or result.result == "") and (#unified_tool_calls == 0) and not result.memory_recall then
-        ctx.writer:update_status(consts.STATUS.IDLE)
-        ctx.upstream:update_session({ status = consts.STATUS.IDLE })
-
-        return {
-            message_id = op.message_id,
-            response_id = response_id,
-            completed = true,
-            next_ops = next_ops
+            completed = true
         }
     end
 
@@ -352,7 +339,8 @@ function message_handlers.process_tools(ctx, op)
         })
     end
 
-    if #op.tool_calls == 0 and #control_ops == 0 then
+    -- Only set IDLE if no more operations are queued
+    if #next_ops == 0 then
         ctx.writer:update_status(consts.STATUS.IDLE)
         ctx.upstream:update_session({ status = consts.STATUS.IDLE })
         return { completed = true }

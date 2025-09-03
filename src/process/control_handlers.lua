@@ -28,6 +28,8 @@ function control_handlers.context_write(ctx, op)
         return nil, consts.ERR.CONTEXT_UPDATE_FAILED .. ": " .. (err or "unknown error")
     end
 
+    ctx.reader:reset()
+
     local context_data, get_err = ctx.reader:get_full_context()
     if get_err then
         context_data = {}
@@ -58,6 +60,8 @@ function control_handlers.context_delete(ctx, op)
     if not success then
         return nil, consts.ERR.CONTEXT_UPDATE_FAILED .. ": " .. (err or "unknown error")
     end
+
+    ctx.reader:reset()
 
     local context_data, get_err = ctx.reader:get_full_context()
     if get_err then
@@ -150,7 +154,6 @@ function control_handlers.control_artifacts(ctx, op)
                         table.insert(instructions, instruction_text)
                     end
                 end
-
             else
                 local success, create_err = ctx.writer:create_artifact(
                     artifact_id,
@@ -204,7 +207,6 @@ function control_handlers.control_artifacts(ctx, op)
                     artifact_added = artifact_id
                 })
             end
-
         elseif artifact_data.id then
             local updates = {
                 title = artifact_data.title,

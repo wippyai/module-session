@@ -119,8 +119,6 @@ function session_handlers.check_background_triggers(ctx, op)
     local message_id = op.message_id
 
     if not tokens or not message_id then
-        ctx.writer:update_status(consts.STATUS.IDLE)
-        ctx.upstream:update_session({ status = consts.STATUS.IDLE })
         return { skipped = true }
     end
 
@@ -160,9 +158,9 @@ function session_handlers.check_background_triggers(ctx, op)
         end
     end
 
-    if not checkpoint_needed and not title_needed then
-        ctx.writer:update_status(consts.STATUS.IDLE)
-        ctx.upstream:update_session({ status = consts.STATUS.IDLE })
+    -- Don't set status here - this is transitory
+    -- Status will be set by the final operation in the chain
+    if #next_ops == 0 then
         return { skipped = true }
     end
 
@@ -188,21 +186,15 @@ function session_handlers.generate_title(ctx, op)
     })
 
     if title_err then
-        ctx.writer:update_status(consts.STATUS.IDLE)
-        ctx.upstream:update_session({ status = consts.STATUS.IDLE })
         return nil, title_err
     end
 
     if not result or not result.title then
-        ctx.writer:update_status(consts.STATUS.IDLE)
-        ctx.upstream:update_session({ status = consts.STATUS.IDLE })
         return nil, "No title returned"
     end
 
     local success, err = ctx.writer:update_title(result.title)
     if not success then
-        ctx.writer:update_status(consts.STATUS.IDLE)
-        ctx.upstream:update_session({ status = consts.STATUS.IDLE })
         return nil, err
     end
 
@@ -215,9 +207,7 @@ function session_handlers.generate_title(ctx, op)
         title = result.title
     })
 
-    ctx.writer:update_status(consts.STATUS.IDLE)
-    ctx.upstream:update_session({ status = consts.STATUS.IDLE })
-
+    -- Don't set status here - this is transitory
     return {
         completed = true,
         title = result.title,
@@ -244,14 +234,10 @@ function session_handlers.create_checkpoint(ctx, op)
     })
 
     if func_err then
-        ctx.writer:update_status(consts.STATUS.IDLE)
-        ctx.upstream:update_session({ status = consts.STATUS.IDLE })
         return nil, func_err
     end
 
     if not result or not result.summary then
-        ctx.writer:update_status(consts.STATUS.IDLE)
-        ctx.upstream:update_session({ status = consts.STATUS.IDLE })
         return nil, "No summary returned"
     end
 
@@ -266,8 +252,6 @@ function session_handlers.create_checkpoint(ctx, op)
 
     local success, err = ctx.writer:update_message_meta(op.message_id, checkpoint_metadata)
     if not success then
-        ctx.writer:update_status(consts.STATUS.IDLE)
-        ctx.upstream:update_session({ status = consts.STATUS.IDLE })
         return nil, err
     end
 
@@ -293,8 +277,6 @@ function session_handlers.create_checkpoint(ctx, op)
 
     local success1, err1 = ctx.writer:set_context(consts.CONTEXT_KEYS.CURRENT_CHECKPOINT_ID, op.checkpoint_id)
     if not success1 then
-        ctx.writer:update_status(consts.STATUS.IDLE)
-        ctx.upstream:update_session({ status = consts.STATUS.IDLE })
         return nil, err1
     end
 
@@ -302,8 +284,6 @@ function session_handlers.create_checkpoint(ctx, op)
 
     local summary_id, ctx_err = ctx.writer:add_session_context(consts.CONTEXT_TYPES.CONVERSATION_SUMMARY, result.summary)
     if ctx_err then
-        ctx.writer:update_status(consts.STATUS.IDLE)
-        ctx.upstream:update_session({ status = consts.STATUS.IDLE })
         return nil, ctx_err
     end
 
@@ -316,11 +296,7 @@ function session_handlers.create_checkpoint(ctx, op)
         })
     end
 
-    if #next_ops == 0 then
-        ctx.writer:update_status(consts.STATUS.IDLE)
-        ctx.upstream:update_session({ status = consts.STATUS.IDLE })
-    end
-
+    -- Don't set status here - let the operation chain complete naturally
     return {
         completed = true,
         checkpoint_id = op.checkpoint_id,

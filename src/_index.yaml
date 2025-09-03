@@ -35,7 +35,7 @@ entries:
     targets:
       - entry: wippy.session.env:token_checkpoint_threshold
         path: ".default"
-    default: "20000"
+    default: "50000"
 
   - name: max_message_limit
     kind: ns.requirement
