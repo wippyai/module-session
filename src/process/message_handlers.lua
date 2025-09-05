@@ -154,10 +154,12 @@ function message_handlers.agent_step(ctx, op)
         ctx.writer:add_message(consts.MSG_TYPE.DEVELOPER, result.memory_prompt.content, memory_metadata)
     end
 
-    local next_ops = {}
+    -- Separate user-facing operations from background operations
+    local user_facing_ops = {}
+    local background_ops = {}
 
     if #unified_tool_calls > 0 then
-        table.insert(next_ops, {
+        table.insert(user_facing_ops, {
             type = consts.OP_TYPE.PROCESS_TOOLS,
             tool_calls = unified_tool_calls,
             message_id = op.message_id,
@@ -167,29 +169,40 @@ function message_handlers.agent_step(ctx, op)
         })
     end
 
+    -- Background operations don't affect user-facing status
     if op.from_user and result.tokens then
-        table.insert(next_ops, {
+        table.insert(background_ops, {
             type = consts.OP_TYPE.CHECK_BACKGROUND_TRIGGERS,
             tokens = result.tokens,
             message_id = op.message_id
         })
     end
 
-    -- Only set IDLE if no more operations are queued
-    if #next_ops == 0 then
+    -- Combine all operations for processing
+    local all_ops = {}
+    for _, op_item in ipairs(user_facing_ops) do
+        table.insert(all_ops, op_item)
+    end
+    for _, op_item in ipairs(background_ops) do
+        table.insert(all_ops, op_item)
+    end
+
+    -- Set IDLE if no user-facing operations (tools)
+    if #user_facing_ops == 0 then
         ctx.writer:update_status(consts.STATUS.IDLE)
         ctx.upstream:update_session({ status = consts.STATUS.IDLE })
         return {
             message_id = op.message_id,
             response_id = response_id,
-            completed = true
+            completed = true,
+            next_ops = all_ops -- Still process background ops
         }
     end
 
     return {
         message_id = op.message_id,
         response_id = response_id,
-        next_ops = next_ops
+        next_ops = all_ops
     }
 end
 

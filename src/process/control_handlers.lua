@@ -321,6 +321,8 @@ function control_handlers.control_context(ctx, op)
         return nil, "Failed to process some context operations"
     end
 
+    ctx.reader:reset()
+
     return { completed = true }
 end
 

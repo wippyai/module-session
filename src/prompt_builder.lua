@@ -34,7 +34,7 @@ function prompt_builder.build(messages, contexts, session_meta, options)
         local metadata = msg.metadata or {}
 
         if msg.type == consts.MSG_TYPE.SYSTEM then
-            builder:add_system(msg.data)
+            -- for internal use only, use developer role for ongoing system messages
         elseif msg.type == consts.MSG_TYPE.USER then
             builder:add_user(msg.data)
 

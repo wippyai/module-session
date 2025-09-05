@@ -9,8 +9,6 @@ entries:
       comment: Operation queuing and coordination system for session processing
       description: Manages operation queues, handler mounting, and async operation processing
     source: file://command_bus.lua
-    modules: []
-    imports: {}
 
   # wippy.session.process:upstream
   - name: upstream
@@ -20,6 +18,35 @@ entries:
       description: Handles communication between session process and upstream systems
     source: file://upstream.lua
     modules:
+      - time
+    imports:
+      consts: wippy.session:consts
+
+  # wippy.session.process:session_handlers
+  - name: session_handlers
+    kind: library.lua
+    meta:
+      comment: Session management and background operation handlers
+      description: Handles agent/model changes, title generation, and checkpointing
+    source: file://session_handlers.lua
+    modules:
+      - json
+      - uuid
+      - funcs
+      - time
+    imports:
+      consts: wippy.session:consts
+
+  # wippy.session.process:control_handlers
+  - name: control_handlers
+    kind: library.lua
+    meta:
+      comment: Control directive handlers for system operations
+      description: Handles artifacts, context, memory, and configuration control directives
+    source: file://control_handlers.lua
+    modules:
+      - json
+      - uuid
       - time
     imports:
       consts: wippy.session:consts
@@ -39,37 +66,8 @@ entries:
     imports:
       consts: wippy.session:consts
       agent_context: wippy.agent:context
-      tool_caller: wippy.agent.tools:caller
       prompt_builder: wippy.session:prompt_builder
-
-  # wippy.session.process:control_handlers
-  - name: control_handlers
-    kind: library.lua
-    meta:
-      comment: Control directive handlers for system operations
-      description: Handles artifacts, context, memory, and configuration control directives
-    source: file://control_handlers.lua
-    modules:
-      - json
-      - uuid
-      - time
-    imports:
-      consts: wippy.session:consts
-
-  # wippy.session.process:session_handlers
-  - name: session_handlers
-    kind: library.lua
-    meta:
-      comment: Session management and background operation handlers
-      description: Handles agent/model changes, title generation, and checkpointing
-    source: file://session_handlers.lua
-    modules:
-      - json
-      - uuid
-      - funcs
-      - time
-    imports:
-      consts: wippy.session:consts
+      tool_caller: wippy.agent.tools:caller
 
   # wippy.session.process:session
   - name: session

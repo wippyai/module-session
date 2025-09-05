@@ -250,10 +250,8 @@ function message_repo.list_by_session(session_id, limit, cursor, direction)
     end
 
     -- Default limit if not provided
-    limit = limit or 50
-    if limit > 100 then
-        limit = 100
-    elseif limit < 1 then
+    limit = limit or 500
+    if limit < 1 then
         limit = 1
     end
 

@@ -59,7 +59,10 @@ CRITICAL FLAGS TO PRESERVE/ADD:
 
 Goal: Working memory that prevents repeated mistakes and tracks complex execution state.
 Write clearly - another AI should immediately understand what to do and what to avoid.
-USE FULL TOKEN BUDGET for complete operational context.]],
+USE FULL TOKEN BUDGET for complete operational context.
+
+Avoid duplicating non-unique information in checkpoint.
+]],
 }
 
 local function handle(args)

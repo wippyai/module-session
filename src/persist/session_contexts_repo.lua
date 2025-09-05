@@ -8,9 +8,9 @@ local session_contexts_repo = {}
 
 -- Get a database connection
 local function get_db()
-    local DB_RESOURCE, _ = consts.get_db_resource()
+    local db_resource, _ = consts.get_db_resource()
 
-    local db, err = sql.get(DB_RESOURCE)
+    local db, err = sql.get(db_resource)
     if err then
         return nil, "Failed to connect to database: " .. err
     end

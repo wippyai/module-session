@@ -231,7 +231,7 @@ entries:
     method: run_tests
 
 
-  # wippy.session:session
+  # wippy.session.persist:reader
   - name: reader
     kind: library.lua
     meta:

@@ -19,11 +19,11 @@ entries:
       input_schema: |
         {
           "type": "object",
-          "properties": {            
+          "properties": {
             "message": {
               "type": "string",
               "description": "The message to forward to the target agent"
-            }      
+            }
           },
           "required": ["message"]
         }
@@ -35,9 +35,9 @@ entries:
       - ctx
       - security
     imports:
+      agent_registry: wippy.agent.discovery:registry
       client: wippy.dataflow:client
       consts: wippy.dataflow:consts
-      agent_registry: wippy.agent.discovery:registry
     method: handle
 
   # wippy.session.funcs:checkpoint
@@ -63,7 +63,7 @@ entries:
               "description": "The session ID to generate checkpoint for"
             },
             "first_msg_id": {
-              "type": "string", 
+              "type": "string",
               "description": "The first message ID in the range to summarize"
             },
             "last_msg_id": {
@@ -81,9 +81,9 @@ entries:
       - time
       - security
     imports:
-      session: wippy.session.persist:reader
-      llm: wippy.llm:llm
       prompt: wippy.llm:prompt
+      llm: wippy.llm:llm
+      session: wippy.session.persist:reader
     method: handle
 
   # wippy.session.funcs:title
@@ -113,7 +113,7 @@ entries:
               "description": "The first message ID in the range to analyze"
             },
             "last_msg_id": {
-              "type": "string", 
+              "type": "string",
               "description": "The last message ID in the range to analyze"
             }
           },
@@ -127,7 +127,7 @@ entries:
       - time
       - security
     imports:
-      session: wippy.session.persist:reader
-      llm: wippy.llm:llm
       prompt: wippy.llm:prompt
+      llm: wippy.llm:llm
+      session: wippy.session.persist:reader
     method: handle

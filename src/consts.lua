@@ -281,7 +281,6 @@ local consts = {
 
     -- Defaults for environment variables
     DEFAULTS = {
-        TOKEN_CHECKPOINT_THRESHOLD = 10000,
         MAX_MESSAGE_LIMIT = 2500,
         CHECKPOINT_FUNCTION_ID = "wippy.session.funcs:checkpoint",
         TITLE_FUNCTION_ID = "wippy.session.funcs:title",
