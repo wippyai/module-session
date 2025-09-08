@@ -2,44 +2,6 @@ version: "1.0"
 namespace: wippy.session.funcs
 
 entries:
-  # wippy.session.funcs:delegate
-  - name: delegate
-    kind: function.lua
-    meta:
-      type: tool
-      title: Delegate To Agent
-      comment: Handles delegation by running the target agent in a dataflow workflow within the session context
-      tags:
-        - delegation
-        - session
-        - workflow
-        - agent
-        - dataflow
-      description: Creates and executes a dataflow workflow for the target agent, running in isolation without access to session context or conversation history. Encapsulated function for standalone delegation.
-      input_schema: |
-        {
-          "type": "object",
-          "properties": {
-            "message": {
-              "type": "string",
-              "description": "The message to forward to the target agent"
-            }
-          },
-          "required": ["message"]
-        }
-      llm_description: Delegate a task to another agent by running them in an isolated dataflow workflow. The target agent will run independently without access to your conversation history. Ensure you include all necessary context in your delegation message.
-    source: file://delegate.lua
-    modules:
-      - json
-      - uuid
-      - ctx
-      - security
-    imports:
-      agent_registry: wippy.agent.discovery:registry
-      client: wippy.dataflow:client
-      consts: wippy.dataflow:consts
-    method: handle
-
   # wippy.session.funcs:checkpoint
   - name: checkpoint
     kind: function.lua
