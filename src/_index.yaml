@@ -89,7 +89,7 @@ entries:
     targets:
       - entry: wippy.session.env:delegation_func_id
         path: ".default"
-    default: "wippy.session.funcs:delegate"
+
   # wippy.session:consts
   - name: consts
     kind: library.lua
