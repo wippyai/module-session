@@ -206,8 +206,6 @@ function message_handlers.process_tools(ctx, op)
         return nil, "Tool validation failed: " .. validate_err
     end
 
-    print(json.encode(op.tool_calls),json.encode(validated_tools))
-
     for call_id, tool_call in pairs(validated_tools) do
         if tool_call.valid then
             local message_type = consts.MSG_TYPE.FUNCTION
