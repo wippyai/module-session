@@ -2,94 +2,49 @@ version: "1.0"
 namespace: wippy.session
 
 entries:
-  # Requirements
-  - name: database_resource
-    kind: ns.requirement
+  # wippy.session:__dependency.wippy.agent
+  - version: '>=v0.2.0'
+    name: __dependency.wippy.agent
+    kind: ns.dependency
     meta:
-      description: "Database resource for session storage"
-    targets:
-      - entry: wippy.session.env:database_resource
-        path: ".default"
-      - entry: wippy.session.migration:01_create_contexts_table
-        path: ".meta.target_db"
-      - entry: wippy.session.migration:02_create_sessions_table
-        path: ".meta.target_db"
-      - entry: wippy.session.migration:03_create_session_contexts_table
-        path: ".meta.target_db"
-      - entry: wippy.session.migration:04_create_messages_table
-        path: ".meta.target_db"
-      - entry: wippy.session.migration:05_create_artifacts_table
-        path: ".meta.target_db"
-      - entry: wippy.session.migration:06_add_session_config_meta_fields
-        path: ".meta.target_db"
-      - entry: wippy.session.migration:07_migrate_session_data_to_new_structure
-        path: ".meta.target_db"
-      - entry: wippy.session.migration:08_remove_legacy_session_fields
-        path: ".meta.target_db"
-    default: "app:db"
-
-  - name: token_checkpoint_threshold
-    kind: ns.requirement
+      description: Agent component
+    component: wippy/agent
+    
+  # wippy.session:__dependency.wippy.llm
+  - version: '>=v0.2.0'
+    name: __dependency.wippy.llm
+    kind: ns.dependency
     meta:
-      description: "Token count threshold for creating conversation checkpoints"
-    targets:
-      - entry: wippy.session.env:token_checkpoint_threshold
-        path: ".default"
-    default: "50000"
-
-  - name: max_message_limit
-    kind: ns.requirement
+      description: LLM component
+    component: wippy/llm
+    
+  # wippy.session:__dependency.wippy.migration
+  - version: '>=v0.0.10'
+    name: __dependency.wippy.migration
+    kind: ns.dependency
     meta:
-      description: "Maximum messages to load for prompt building"
-    targets:
-      - entry: wippy.session.env:max_message_limit
-        path: ".default"
-    default: "500"
-
+      description: Migration component
+    component: wippy/migration
+    
+  # wippy.session:__dependency.wippy.test
+  - version: '>=v0.0.8'
+    name: __dependency.wippy.test
+    kind: ns.dependency
+    meta:
+      description: Testing component
+    component: wippy/test
+    
+  # wippy.session:checkpoint_function_id
   - name: checkpoint_function_id
     kind: ns.requirement
     meta:
-      description: "Function ID for generating checkpoint summaries (checkpoints enabled when set)"
+      description: Function ID for generating checkpoint summaries (checkpoints enabled when set)
+      parent: app.deps:__dependency.wippy.session
+    default: wippy.session.funcs:checkpoint
     targets:
       - entry: wippy.session.env:checkpoint_function_id
-        path: ".default"
-    default: "wippy.session.funcs:checkpoint"
-
-  - name: title_function_id
-    kind: ns.requirement
-    meta:
-      description: "Function ID for generating session titles (automatic titles enabled when set)"
-    targets:
-      - entry: wippy.session.env:title_function_id
-        path: ".default"
-    default: "wippy.session.funcs:title"
-
-  - name: default_host
-    kind: ns.requirement
-    meta:
-      description: "Default host for session processes"
-    targets:
-      - entry: wippy.session.env:default_host
-        path: ".default"
-    default: "app:processes"
-
-  - name: gc_interval
-    kind: ns.requirement
-    meta:
-      description: "Garbage collection interval for session cleanup"
-    targets:
-      - entry: wippy.session.env:gc_interval
-        path: ".default"
-    default: "300s"
-
-  - name: delegation_func_id
-    kind: ns.requirement
-    meta:
-      description: "Function ID for delegation calls (delegation enabled when set)"
-    targets:
-      - entry: wippy.session.env:delegation_func_id
-        path: ".default"
-
+        path: .default
+    
   # wippy.session:consts
   - name: consts
     kind: library.lua
@@ -100,36 +55,92 @@ entries:
     modules:
       - env
       - time
-
-  # Dependencies
-  - name: __dependency.wippy.llm
-    kind: "ns.dependency"
+    
+  # wippy.session:database_resource
+  - name: database_resource
+    kind: ns.requirement
     meta:
-      description: "LLM component"
-    component: "wippy/llm"
-    version: ">=v0.2.0"
-
-  - name: __dependency.wippy.migration
-    kind: "ns.dependency"
+      description: Database resource for session storage
+      parent: app.deps:__dependency.wippy.session
+    default: app:db
+    targets:
+      - entry: wippy.session.env:database_resource
+        path: .default
+      - entry: wippy.session.migration:01_create_contexts_table
+        path: .meta.target_db
+      - entry: wippy.session.migration:02_create_sessions_table
+        path: .meta.target_db
+      - entry: wippy.session.migration:03_create_session_contexts_table
+        path: .meta.target_db
+      - entry: wippy.session.migration:04_create_messages_table
+        path: .meta.target_db
+      - entry: wippy.session.migration:05_create_artifacts_table
+        path: .meta.target_db
+      - entry: wippy.session.migration:06_add_session_config_meta_fields
+        path: .meta.target_db
+      - entry: wippy.session.migration:07_migrate_session_data_to_new_structure
+        path: .meta.target_db
+      - entry: wippy.session.migration:08_remove_legacy_session_fields
+        path: .meta.target_db
+    
+  # wippy.session:default_host
+  - name: default_host
+    kind: ns.requirement
     meta:
-      description: "Migration component"
-    component: "wippy/migration"
-    version: ">=v0.0.10"
-
-  - name: __dependency.wippy.agent
-    kind: "ns.dependency"
+      description: Default host for session processes
+      parent: app.deps:__dependency.wippy.session
+    default: app:processes
+    targets:
+      - entry: wippy.session.env:default_host
+        path: .default
+    
+  # wippy.session:delegation_func_id
+  - name: delegation_func_id
+    kind: ns.requirement
     meta:
-      description: "Agent component"
-    component: "wippy/agent"
-    version: ">=v0.2.0"
-
-  - name: __dependency.wippy.test
-    kind: "ns.dependency"
+      description: Function ID for delegation calls (delegation enabled when set)
+      parent: app.deps:__dependency.wippy.session
+    targets:
+      - entry: wippy.session.env:delegation_func_id
+        path: .default
+    
+  # wippy.session:gc_interval
+  - name: gc_interval
+    kind: ns.requirement
     meta:
-      description: "Testing component"
-    component: "wippy/test"
-    version: ">=v0.0.8"
-
+      description: Garbage collection interval for session cleanup
+      parent: app.deps:__dependency.wippy.session
+    default: 300s
+    targets:
+      - entry: wippy.session.env:gc_interval
+        path: .default
+    
+  # wippy.session:max_message_limit
+  - name: max_message_limit
+    kind: ns.requirement
+    meta:
+      description: Maximum messages to load for prompt building
+      parent: app.deps:__dependency.wippy.session
+    default: "500"
+    targets:
+      - entry: wippy.session.env:max_message_limit
+        path: .default
+    
+  # wippy.session:prompt_builder
+  - name: prompt_builder
+    kind: library.lua
+    meta:
+      comment: Prompt construction and formatting library for session messages
+      description: Builds prompts from message history, context, and templates
+    source: file://prompt_builder.lua
+    modules:
+      - text
+      - json
+    imports:
+      prompt: wippy.llm:prompt
+      consts: wippy.session:consts
+      upload_repo: userspace.uploads:upload_repo
+    
   # wippy.session:start_tokens
   - name: start_tokens
     kind: library.lua
@@ -143,7 +154,7 @@ entries:
       - json
     imports:
       consts: wippy.session:consts
-
+    
   # wippy.session:start_tokens_test
   - name: start_tokens_test
     kind: function.lua
@@ -167,18 +178,26 @@ entries:
       start_tokens: wippy.session:start_tokens
       test: wippy.test:test
     method: run_tests
-
-  # wippy.session:prompt_builder
-  - name: prompt_builder
-    kind: library.lua
+    
+  # wippy.session:title_function_id
+  - name: title_function_id
+    kind: ns.requirement
     meta:
-      comment: Prompt construction and formatting library for session messages
-      description: Builds prompts from message history, context, and templates
-    source: file://prompt_builder.lua
-    modules:
-      - text
-      - json
-    imports:
-      consts: wippy.session:consts
-      prompt: wippy.llm:prompt
-      upload_repo: userspace.uploads:upload_repo
+      description: Function ID for generating session titles (automatic titles enabled when set)
+      parent: app.deps:__dependency.wippy.session
+    default: wippy.session.funcs:title
+    targets:
+      - entry: wippy.session.env:title_function_id
+        path: .default
+    
+  # wippy.session:token_checkpoint_threshold
+  - name: token_checkpoint_threshold
+    kind: ns.requirement
+    meta:
+      description: Token count threshold for creating conversation checkpoints
+      parent: app.deps:__dependency.wippy.session
+    default: "50000"
+    targets:
+      - entry: wippy.session.env:token_checkpoint_threshold
+        path: .default
+    

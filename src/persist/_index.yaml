@@ -2,25 +2,6 @@ version: "1.0"
 namespace: wippy.session.persist
 
 entries:
-  # wippy.session.persist:writer
-  - name: writer
-    kind: library.lua
-    meta:
-      comment: Session writer for secure write operations on sessions, messages, artifacts, and contexts
-      description: Comprehensive writer API with security enforcement for all session write operations including session management, message handling, artifact creation, and context management
-    source: file://writer.lua
-    modules:
-      - uuid
-      - json
-      - time
-      - security
-    imports:
-      session_repo: wippy.session.persist:session_repo
-      message_repo: wippy.session.persist:message_repo
-      artifact_repo: wippy.session.persist:artifact_repo
-      context_repo: wippy.session.persist:context_repo
-      session_contexts_repo: wippy.session.persist:session_contexts_repo
-
   # wippy.session.persist:artifact_repo
   - name: artifact_repo
     kind: library.lua
@@ -34,7 +15,7 @@ entries:
       - time
     imports:
       consts: wippy.session:consts
-
+    
   # wippy.session.persist:artifact_repo_test
   - name: artifact_repo_test
     kind: function.lua
@@ -58,12 +39,12 @@ entries:
       - security
     imports:
       artifact_repo: wippy.session.persist:artifact_repo
+      consts: wippy.session:consts
       context_repo: wippy.session.persist:context_repo
       session_repo: wippy.session.persist:session_repo
       test: wippy.test:test
-      consts: wippy.session:consts
     method: run_tests
-
+    
   # wippy.session.persist:context_repo
   - name: context_repo
     kind: library.lua
@@ -76,7 +57,7 @@ entries:
       - time
     imports:
       consts: wippy.session:consts
-
+    
   # wippy.session.persist:context_repo_test
   - name: context_repo_test
     kind: function.lua
@@ -98,11 +79,11 @@ entries:
       - time
       - security
     imports:
+      consts: wippy.session:consts
       context_repo: wippy.session.persist:context_repo
       test: wippy.test:test
-      consts: wippy.session:consts
     method: run_tests
-
+    
   # wippy.session.persist:message_repo
   - name: message_repo
     kind: library.lua
@@ -116,7 +97,7 @@ entries:
       - time
     imports:
       consts: wippy.session:consts
-
+    
   # wippy.session.persist:message_repo_test
   - name: message_repo_test
     kind: function.lua
@@ -139,13 +120,30 @@ entries:
       - time
       - security
     imports:
+      consts: wippy.session:consts
       context_repo: wippy.session.persist:context_repo
       message_repo: wippy.session.persist:message_repo
       session_repo: wippy.session.persist:session_repo
       test: wippy.test:test
-      consts: wippy.session:consts
     method: run_tests
-
+    
+  # wippy.session.persist:reader
+  - name: reader
+    kind: library.lua
+    meta:
+      comment: Main session library with query builders for messages, artifacts, and contexts
+      description: Provides SessionReader with fluent query interface for accessing session data including messages, artifacts, and contexts with security enforcement
+    source: file://reader.lua
+    modules:
+      - security
+      - json
+    imports:
+      artifact_repo: wippy.session.persist:artifact_repo
+      context_repo: wippy.session.persist:context_repo
+      message_repo: wippy.session.persist:message_repo
+      session_contexts_repo: wippy.session.persist:session_contexts_repo
+      session_repo: wippy.session.persist:session_repo
+    
   # wippy.session.persist:session_contexts_repo
   - name: session_contexts_repo
     kind: library.lua
@@ -159,7 +157,7 @@ entries:
       - time
     imports:
       consts: wippy.session:consts
-
+    
   # wippy.session.persist:session_contexts_repo_test
   - name: session_contexts_repo_test
     kind: function.lua
@@ -181,13 +179,13 @@ entries:
       - time
       - security
     imports:
+      consts: wippy.session:consts
       context_repo: wippy.session.persist:context_repo
       session_contexts_repo: wippy.session.persist:session_contexts_repo
       session_repo: wippy.session.persist:session_repo
       test: wippy.test:test
-      consts: wippy.session:consts
     method: run_tests
-
+    
   # wippy.session.persist:session_repo
   - name: session_repo
     kind: library.lua
@@ -201,7 +199,7 @@ entries:
       - time
     imports:
       consts: wippy.session:consts
-
+    
   # wippy.session.persist:session_repo_test
   - name: session_repo_test
     kind: function.lua
@@ -224,26 +222,28 @@ entries:
       - time
       - security
     imports:
+      consts: wippy.session:consts
       context_repo: wippy.session.persist:context_repo
       session_repo: wippy.session.persist:session_repo
       test: wippy.test:test
-      consts: wippy.session:consts
     method: run_tests
-
-
-  # wippy.session.persist:reader
-  - name: reader
+    
+  # wippy.session.persist:writer
+  - name: writer
     kind: library.lua
     meta:
-      comment: Main session library with query builders for messages, artifacts, and contexts
-      description: Provides SessionReader with fluent query interface for accessing session data including messages, artifacts, and contexts with security enforcement
-    source: file://reader.lua
+      comment: Session writer for secure write operations on sessions, messages, artifacts, and contexts
+      description: Comprehensive writer API with security enforcement for all session write operations including session management, message handling, artifact creation, and context management
+    source: file://writer.lua
     modules:
-      - security
+      - uuid
       - json
+      - time
+      - security
     imports:
-      session_repo: wippy.session.persist:session_repo
-      message_repo: wippy.session.persist:message_repo
       artifact_repo: wippy.session.persist:artifact_repo
-      session_contexts_repo: wippy.session.persist:session_contexts_repo
       context_repo: wippy.session.persist:context_repo
+      message_repo: wippy.session.persist:message_repo
+      session_contexts_repo: wippy.session.persist:session_contexts_repo
+      session_repo: wippy.session.persist:session_repo
+    

@@ -39,8 +39,7 @@ local function run(args)
     })
 
     -- Configure delegation if enabled
-    if  session_data.config.delegation_func_id then
-        -- Load delegation schema from registry like the old system
+    if session_data.config.delegation_func_id then
         local delegation_schema = nil
         local tool_schema, schema_err = tools.get_tool_schema(session_data.config.delegation_func_id)
         if tool_schema and tool_schema.schema then
@@ -61,17 +60,16 @@ local function run(args)
         writer = session_writer,
         upstream = session_upstream,
         config = session_data.config,
-        agent_ctx = agent_ctx
+        agent_ctx = agent_ctx,
+        queue_empty_callback = function()
+            session_writer:update_status(consts.STATUS.IDLE)
+            session_upstream:update_session({ status = consts.STATUS.IDLE })
+        end
     }
 
     local bus = command_bus.new(context)
 
-    -- Create intercept handler that receives next_ops for flexible logic
     local function intercept_handler(ctx, op)
-        -- Reset session status to idle
-        ctx.writer:update_status(consts.STATUS.IDLE)
-        ctx.upstream:update_session({ status = consts.STATUS.IDLE })
-
         return {
             completed = true,
             intercepted = true,
@@ -117,7 +115,6 @@ local function run(args)
             })
         end
 
-        -- Execute initialization function if provided by plugin
         if args.init_function then
             bus:queue_op({
                 type = consts.OP_TYPE.EXECUTE_FUNCTION,
@@ -141,7 +138,6 @@ local function run(args)
     local session_state = { stopping = false }
     local bus_done = channel.new()
 
-    -- Start command bus in separate coroutine
     coroutine.spawn(function()
         local _, bus_err = bus:run()
         if bus_err then
@@ -174,6 +170,10 @@ local function run(args)
                     session_upstream.conn_pid = payload_data.conn_pid
                 end
 
+                -- Set RUNNING status when user message received
+                session_writer:update_status(consts.STATUS.RUNNING)
+                session_upstream:update_session({ status = consts.STATUS.RUNNING })
+
                 bus:queue_op({
                     type = consts.OP_TYPE.HANDLE_MESSAGE,
                     data = payload_data.data,
@@ -185,9 +185,7 @@ local function run(args)
                     session_upstream.conn_pid = payload_data.conn_pid
                 end
 
-                -- Handle special context commands (like old system)
                 if payload_data.command == consts.COMMANDS.CONTEXT then
-                    -- Context commands are not public and handled directly
                     bus:queue_op({
                         type = consts.OP_TYPE.HANDLE_CONTEXT_COMMAND,
                         action = payload_data.action,
@@ -216,7 +214,6 @@ local function run(args)
                     end
                 elseif payload_data.command == consts.COMMANDS.ARTIFACT then
                     if payload_data.artifact_id then
-                        -- Reference existing artifact (legacy compatibility)
                         local message_id, err = session_writer:add_message(consts.MSG_TYPE.ARTIFACT, "", {
                             artifact_id = payload_data.artifact_id
                         })
@@ -231,7 +228,6 @@ local function run(args)
                             session_upstream:command_success(payload_data.request_id)
                         end
                     elseif payload_data.artifacts then
-                        -- Create new artifacts (current system)
                         bus:queue_op({
                             type = consts.OP_TYPE.CONTROL_ARTIFACTS,
                             artifacts = payload_data.artifacts,

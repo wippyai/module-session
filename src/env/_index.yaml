@@ -9,9 +9,10 @@ entries:
       comment: Function ID for generating checkpoint summaries (checkpoints enabled when set)
       icon: tabler:summary
       private: true
+    default: wippy.session.funcs:checkpoint
     storage: app.env:router
     variable: SESSION_CHECKPOINT_FUNCTION_ID
-
+    
   # wippy.session.env:database_resource
   - name: database_resource
     kind: env.variable
@@ -19,9 +20,10 @@ entries:
       comment: Database resource for session storage
       icon: tabler:database
       private: true
+    default: app:db
     storage: app.env:router
     variable: SESSION_DATABASE_RESOURCE
-
+    
   # wippy.session.env:default_host
   - name: default_host
     kind: env.variable
@@ -29,9 +31,10 @@ entries:
       comment: Default host for session processes
       icon: tabler:server
       private: true
+    default: app:processes
     storage: app.env:router
     variable: SESSION_DEFAULT_HOST
-
+    
   # wippy.session.env:delegation_func_id
   - name: delegation_func_id
     kind: env.variable
@@ -39,9 +42,10 @@ entries:
       comment: Function ID for delegation calls (delegation enabled when set)
       icon: tabler:function
       private: true
+    default: userspace.dataflow.session:delegate
     storage: app.env:router
     variable: SESSION_DELEGATION_FUNC_ID
-
+    
   # wippy.session.env:gc_interval
   - name: gc_interval
     kind: env.variable
@@ -49,9 +53,10 @@ entries:
       comment: Garbage collection interval for session cleanup
       icon: tabler:clock
       private: true
+    default: 300s
     storage: app.env:router
     variable: SESSION_GC_INTERVAL
-
+    
   # wippy.session.env:max_message_limit
   - name: max_message_limit
     kind: env.variable
@@ -59,9 +64,10 @@ entries:
       comment: Maximum messages to load for prompt building
       icon: tabler:list
       private: true
+    default: "500"
     storage: app.env:router
     variable: SESSION_MAX_MESSAGE_LIMIT
-
+    
   # wippy.session.env:session_security_scope
   - name: session_security_scope
     kind: env.variable
@@ -71,7 +77,7 @@ entries:
       private: true
     storage: app.env:router
     variable: SESSION_SECURITY_SCOPE
-
+    
   # wippy.session.env:title_function_id
   - name: title_function_id
     kind: env.variable
@@ -79,9 +85,10 @@ entries:
       comment: Function ID for generating session titles (automatic titles enabled when set)
       icon: tabler:heading
       private: true
+    default: wippy.session.funcs:title
     storage: app.env:router
     variable: SESSION_TITLE_FUNCTION_ID
-
+    
   # wippy.session.env:token_checkpoint_threshold
   - name: token_checkpoint_threshold
     kind: env.variable
@@ -89,5 +96,7 @@ entries:
       comment: Token count threshold for creating conversation checkpoints
       icon: tabler:checkpoint
       private: true
+    default: "32000"
     storage: app.env:router
     variable: SESSION_TOKEN_CHECKPOINT_THRESHOLD
+    

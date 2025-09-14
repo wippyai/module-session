@@ -47,7 +47,7 @@ entries:
       llm: wippy.llm:llm
       session: wippy.session.persist:reader
     method: handle
-
+    
   # wippy.session.funcs:title
   - name: title
     kind: function.lua
@@ -93,3 +93,4 @@ entries:
       llm: wippy.llm:llm
       session: wippy.session.persist:reader
     method: handle
+    

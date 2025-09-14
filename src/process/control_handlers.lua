@@ -395,22 +395,66 @@ function control_handlers.control_config(ctx, op)
     local config_changed = false
     local agent_changed = false
     local model_changed = false
+    local previous_agent = current_config.agent_id
+    local previous_model = current_config.model
 
     if op.config_changes.agent then
         current_config.agent_id = op.config_changes.agent
         config_changed = true
         agent_changed = true
-        ctx.upstream:update_session({ agent = op.config_changes.agent })
     end
 
     if op.config_changes.model then
         current_config.model = op.config_changes.model
         config_changed = true
         model_changed = true
-        ctx.upstream:update_session({ model = op.config_changes.model })
     end
 
     if config_changed then
+        ctx.reader:reset()
+
+        if agent_changed and not model_changed then
+            -- Agent changed but no explicit model - use new agent's default model
+            local switch_success, switch_err = ctx.agent_ctx:switch_to_agent(current_config.agent_id)
+
+            if switch_success then
+                -- Get the new agent's default model and update config
+                local new_model = ctx.agent_ctx.current_model
+                current_config.model = new_model
+                ctx.config.model = new_model
+
+                ctx.upstream:update_session({
+                    agent = current_config.agent_id,
+                    model = new_model
+                })
+            else
+                return nil, "Failed to switch to agent: " .. (switch_err or "unknown error")
+            end
+        elseif agent_changed and model_changed then
+            -- Both agent and model explicitly changed
+            local switch_success, switch_err = ctx.agent_ctx:switch_to_agent(current_config.agent_id, {
+                model = current_config.model
+            })
+
+            if not switch_success then
+                return nil, "Failed to switch to agent with model: " .. (switch_err or "unknown error")
+            end
+
+            ctx.upstream:update_session({
+                agent = current_config.agent_id,
+                model = current_config.model
+            })
+        elseif model_changed then
+            -- Only model changed
+            local switch_success, switch_err = ctx.agent_ctx:switch_to_model(current_config.model)
+
+            if not switch_success then
+                return nil, "Failed to switch model: " .. (switch_err or "unknown error")
+            end
+
+            ctx.upstream:update_session({ model = current_config.model })
+        end
+
         local success, err = ctx.writer:update_meta({ config = current_config })
         if not success then
             return nil, "Failed to update session config: " .. err
@@ -420,14 +464,25 @@ function control_handlers.control_config(ctx, op)
             ctx.config[k] = v
         end
 
-        ctx.reader:reset()
+        -- Add system message if agent or model changed
+        if agent_changed or model_changed then
+            local change_parts = {}
+            if agent_changed then
+                table.insert(change_parts, string.format("agent: %s", current_config.agent_id))
+            end
+            if model_changed or (agent_changed and not model_changed) then
+                table.insert(change_parts, string.format("model: %s", current_config.model))
+            end
 
-        if agent_changed then
-            local switch_success, switch_err = ctx.agent_ctx:switch_to_agent(current_config.agent_id, {
-                model = current_config.model
+            local change_message = string.format("Configuration changed (%s)", table.concat(change_parts, ", "))
+            ctx.writer:add_message(consts.MSG_TYPE.SYSTEM, change_message, {
+                system_action = "config_change",
+                previous_agent = previous_agent,
+                new_agent = agent_changed and current_config.agent_id or nil,
+                previous_model = previous_model,
+                new_model = current_config.model
             })
-        elseif model_changed then
-            local switch_success, switch_err = ctx.agent_ctx:switch_to_model(current_config.model)
+            ctx.writer:add_message(consts.MSG_TYPE.DEVELOPER, change_message)
         end
     end
 
