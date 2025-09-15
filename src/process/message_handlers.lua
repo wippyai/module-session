@@ -15,8 +15,6 @@ function message_handlers.handle_message(ctx, op)
     end
 
     ctx.upstream:message_received(message_id, op.data.text or "", op.data.file_uuids)
-    ctx.writer:update_status(consts.STATUS.RUNNING)
-    ctx.upstream:update_session({ status = consts.STATUS.RUNNING })
 
     return {
         message_id = message_id,
@@ -187,29 +185,16 @@ function message_handlers.agent_step(ctx, op)
         table.insert(all_ops, op_item)
     end
 
-    -- Set IDLE if no user-facing operations (tools)
-    if #user_facing_ops == 0 then
-        ctx.writer:update_status(consts.STATUS.IDLE)
-        ctx.upstream:update_session({ status = consts.STATUS.IDLE })
-        return {
-            message_id = op.message_id,
-            response_id = response_id,
-            completed = true,
-            next_ops = all_ops -- Still process background ops
-        }
-    end
-
     return {
         message_id = op.message_id,
         response_id = response_id,
+        completed = (#user_facing_ops == 0),
         next_ops = all_ops
     }
 end
 
 function message_handlers.process_tools(ctx, op)
     if not op.tool_calls or #op.tool_calls == 0 then
-        ctx.writer:update_status(consts.STATUS.IDLE)
-        ctx.upstream:update_session({ status = consts.STATUS.IDLE })
         return { completed = true }
     end
 
@@ -228,6 +213,9 @@ function message_handlers.process_tools(ctx, op)
 
             if tool_call.registry_id == ctx.config.delegation_func_id then
                 message_type = consts.MSG_TYPE.DELEGATION
+                send_upstream = false
+            elseif tool_call.meta and tool_call.meta.private then
+                message_type = consts.MSG_TYPE.PRIVATE_FUNCTION
                 send_upstream = false
             end
 
@@ -263,6 +251,7 @@ function message_handlers.process_tools(ctx, op)
     for call_id, result_data in pairs(results) do
         local message_id = result_data.tool_call.message_id
         local is_delegation = result_data.tool_call.registry_id == ctx.config.delegation_func_id
+        local is_private = result_data.tool_call.meta and result_data.tool_call.meta.private
 
         if result_data.error then
             ctx.writer:update_message_meta(message_id, {
@@ -273,7 +262,7 @@ function message_handlers.process_tools(ctx, op)
                 registry_id = result_data.tool_call.registry_id
             })
 
-            if not is_delegation then
+            if not is_delegation and not is_private then
                 ctx.upstream:send_message_update(call_id, consts.UPSTREAM_TYPES.FUNCTION_ERROR, {
                     call_id = call_id,
                     function_name = result_data.tool_call.name,
@@ -331,7 +320,7 @@ function message_handlers.process_tools(ctx, op)
                 registry_id = result_data.tool_call.registry_id
             })
 
-            if not is_delegation then
+            if not is_delegation and not is_private then
                 ctx.upstream:send_message_update(call_id, consts.UPSTREAM_TYPES.FUNCTION_SUCCESS, {
                     call_id = call_id,
                     function_name = result_data.tool_call.name
@@ -352,14 +341,10 @@ function message_handlers.process_tools(ctx, op)
         })
     end
 
-    -- Only set IDLE if no more operations are queued
-    if #next_ops == 0 then
-        ctx.writer:update_status(consts.STATUS.IDLE)
-        ctx.upstream:update_session({ status = consts.STATUS.IDLE })
-        return { completed = true }
-    end
-
-    return { next_ops = next_ops }
+    return {
+        completed = (#next_ops == 0),
+        next_ops = next_ops
+    }
 end
 
 function message_handlers.agent_continue(ctx, op)

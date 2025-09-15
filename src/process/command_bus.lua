@@ -14,6 +14,7 @@ function command_bus.new(context)
     self.intercept_handler = nil
 
     self.handlers = {}
+    self.pending_ops = 0
 
     return self
 end
@@ -31,6 +32,7 @@ function command_bus:queue_op(op)
         return false, "Command bus is stopping"
     end
     self.ops_channel:send(op)
+    self.pending_ops = self.pending_ops + 1
     return true, nil
 end
 
@@ -100,6 +102,7 @@ function command_bus:process_operation(op)
     if result and result.next_ops then
         for _, next_op in ipairs(result.next_ops) do
             self.ops_channel:send(next_op)
+            self.pending_ops = self.pending_ops + 1
         end
     end
 
@@ -134,11 +137,18 @@ function command_bus:run()
             self.stopping = true
         elseif result.channel == self.ops_channel then
             local _, err = self:process_operation(result.value)
+            self.pending_ops = self.pending_ops - 1
+
             if err then
                 local is_fatal = self:is_fatal_error(err, result.value.type)
                 if is_fatal then
                     return nil, err
                 end
+            end
+
+            -- Check if all operations processed and call callback if available
+            if self.pending_ops == 0 and self.context.queue_empty_callback then
+                self.context.queue_empty_callback()
             end
         end
     end

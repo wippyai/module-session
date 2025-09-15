@@ -38,11 +38,6 @@ function session_handlers.execute_function(ctx, op)
     local result_data = results[call_id]
 
     if result_data.error then
-        ctx.writer:add_message(consts.MSG_TYPE.SYSTEM, "Function execution failed: " .. tostring(result_data.error), {
-            system_action = "init_function_error",
-            function_id = op.function_id,
-            error = tostring(result_data.error)
-        })
         return nil, "Function execution failed: " .. tostring(result_data.error)
     end
 
@@ -84,13 +79,6 @@ function session_handlers.execute_function(ctx, op)
         tool_result._control = nil
     end
 
-    ctx.writer:add_message(consts.MSG_TYPE.SYSTEM, "Initialization function executed", {
-        system_action = "init_function_executed",
-        function_id = op.function_id,
-        function_result = tool_result,
-        control_operations = control
-    })
-
     for _, control_op in ipairs(control_ops) do
         table.insert(next_ops, control_op)
     end
@@ -104,9 +92,6 @@ function session_handlers.execute_function(ctx, op)
 end
 
 function session_handlers.intercept_execution(ctx, op)
-    ctx.writer:update_status(consts.STATUS.IDLE)
-    ctx.upstream:update_session({ status = consts.STATUS.IDLE })
-
     return {
         completed = true,
         intercepted = true
@@ -158,8 +143,6 @@ function session_handlers.check_background_triggers(ctx, op)
         end
     end
 
-    -- Don't set status here - this is transitory
-    -- Status will be set by the final operation in the chain
     if #next_ops == 0 then
         return { skipped = true }
     end
@@ -202,12 +185,6 @@ function session_handlers.generate_title(ctx, op)
 
     ctx.upstream:update_session({ title = result.title })
 
-    local msg_id, msg_err = ctx.writer:add_message(consts.MSG_TYPE.SYSTEM, "Session title generated", {
-        system_action = "title_generated",
-        title = result.title
-    })
-
-    -- Don't set status here - this is transitory
     return {
         completed = true,
         title = result.title,
@@ -296,7 +273,6 @@ function session_handlers.create_checkpoint(ctx, op)
         })
     end
 
-    -- Don't set status here - let the operation chain complete naturally
     return {
         completed = true,
         checkpoint_id = op.checkpoint_id,
@@ -313,37 +289,53 @@ function session_handlers.agent_change(ctx, op)
     local session_data = ctx.reader:state()
     local current_config = session_data.config or {}
     local previous_agent = current_config.agent_id
+    local previous_model = current_config.model
 
     current_config.agent_id = op.agent_id
+
+    ctx.reader:reset()
+
+    -- Switch to new agent without forcing current model
+    local switch_success, switch_err = ctx.agent_ctx:switch_to_agent(op.agent_id)
+
+    if not switch_success then
+        return nil, "Failed to switch agent: " .. (switch_err or "unknown error")
+    end
+
+    -- Get the new agent's default model and update config
+    local new_model = ctx.agent_ctx.current_model
+    current_config.model = new_model
+    ctx.config.model = new_model
+    ctx.config.agent_id = op.agent_id
 
     local success, err = ctx.writer:update_meta({ config = current_config })
     if not success then
         return nil, "Failed to update agent config: " .. (err or "unknown error")
     end
 
-    ctx.config.agent_id = op.agent_id
-
-    ctx.reader:reset()
-
-    local switch_success, switch_err = ctx.agent_ctx:switch_to_agent(op.agent_id, {
-        model = ctx.config.model
-    })
-
-    local setup_message = string.format("Agent changed to: %s", op.agent_id)
-    ctx.writer:add_message(consts.MSG_TYPE.SYSTEM, setup_message, {
+    local switch_message = string.format("Agent changed to: %s (model: %s)", op.agent_id, new_model)
+    ctx.writer:add_message(consts.MSG_TYPE.SYSTEM, switch_message, {
         system_action = "agent_change",
         from_agent = previous_agent,
-        to_agent = op.agent_id
+        to_agent = op.agent_id,
+        from_model = previous_model,
+        to_model = new_model
     })
 
+    -- let's agent know and reset cache behaviours
+    ctx.writer:add_message(consts.MSG_TYPE.DEVELOPER, switch_message)
+
     ctx.upstream:update_session({
-        agent = op.agent_id
+        agent = op.agent_id,
+        model = new_model
     })
 
     return {
         completed = true,
         previous_agent = previous_agent,
-        new_agent = op.agent_id
+        new_agent = op.agent_id,
+        previous_model = previous_model,
+        new_model = new_model
     }
 end
 
@@ -377,6 +369,9 @@ function session_handlers.model_change(ctx, op)
         from_model = previous_model,
         to_model = op.model
     })
+
+    -- let's agent know and resest cache behaviours
+    ctx.writer:add_message(consts.MSG_TYPE.DEVELOPER, change_message)
 
     ctx.upstream:update_session({
         model = op.model
