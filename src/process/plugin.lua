@@ -167,6 +167,40 @@ local function run(args)
         return session
     end
 
+    local function reset_session_status_if_crashed(session_id, existing_session)
+        -- If session exists in DB but not in active sessions, it likely crashed
+        -- Reset status to IDLE to ensure clean recovery
+        if existing_session and not state.active_sessions[session_id] then
+            local current_meta = existing_session.meta or {}
+            if current_meta.status and current_meta.status ~= consts.STATUS.IDLE then
+                logger:info("detected crashed session - resetting status to idle", {
+                    user_id = state.user_id,
+                    session_id = session_id,
+                    previous_status = current_meta.status
+                })
+
+                local success, err = session_repo.update_session_meta(session_id, { status = consts.STATUS.IDLE })
+                if not success then
+                    logger:warn("failed to reset session status after crash", {
+                        session_id = session_id,
+                        error = err
+                    })
+                    return false, "Failed to reset session status: " .. (err or "unknown error")
+                end
+
+                -- Notify hub of status reset if available
+                if state.user_hub_pid then
+                    process.send(state.user_hub_pid, consts.TOPIC_PREFIXES.SESSION .. session_id, {
+                        type = consts.UPSTREAM_TYPES.UPDATE,
+                        session_id = session_id,
+                        status = consts.STATUS.IDLE
+                    })
+                end
+            end
+        end
+        return true, nil
+    end
+
     local function create_session(payload_data)
         if not payload_data then
             return nil, "Payload data is required"
@@ -204,6 +238,16 @@ local function run(args)
 
         local existing_session, _ = session_repo.get(session_id, state.user_id)
         local session_exists = existing_session ~= nil
+
+        -- Handle crash recovery: reset status if session exists but isn't active
+        if session_exists then
+            local reset_success, reset_err = reset_session_status_if_crashed(session_id, existing_session)
+            if not reset_success then
+                send_error(payload_data.conn_pid, consts.ERROR_CODES.SESSION_SPAWN,
+                    "Failed to recover crashed session: " .. reset_err, payload_data.request_id)
+                return nil, reset_err
+            end
+        end
 
         local create_new_session = not session_exists
 
@@ -390,8 +434,38 @@ local function run(args)
                 process.send(session_info.pid, consts.TOPICS.COMMAND, cmd_data)
             end
         else
-            send_error(conn_pid, consts.ERROR_CODES.SESSION_NOT_FOUND,
-                "Session not found: " .. session_id, request_id)
+            -- Session ID provided but not in active sessions - try to recover
+            logger:info("attempting to recover inactive session", { user_id = state.user_id, session_id = session_id })
+            local created_session_id, err = create_session(payload_data)
+            if err then
+                send_error(conn_pid, consts.ERROR_CODES.SESSION_NOT_FOUND,
+                    "Session not found and recovery failed: " .. err, request_id)
+                return
+            end
+
+            -- Retry the message/command with the recovered session
+            local recovered_session_info = state.active_sessions[created_session_id]
+            if recovered_session_info then
+                update_session_activity(created_session_id)
+
+                if topic_type == consts.HANDLER_TYPES.MESSAGE then
+                    process.send(recovered_session_info.pid, consts.TOPICS.MESSAGE, {
+                        conn_pid = conn_pid,
+                        data = payload_data.data,
+                        request_id = request_id
+                    })
+                elseif topic_type == consts.HANDLER_TYPES.COMMAND then
+                    local cmd_data = payload_data.data or {}
+                    cmd_data.conn_pid = conn_pid
+                    if request_id then
+                        cmd_data.request_id = request_id
+                    end
+                    process.send(recovered_session_info.pid, consts.TOPICS.COMMAND, cmd_data)
+                end
+            else
+                send_error(conn_pid, consts.ERROR_CODES.SESSION_NOT_FOUND,
+                    "Session recovery failed", request_id)
+            end
         end
     end
 
