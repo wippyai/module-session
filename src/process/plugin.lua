@@ -12,7 +12,6 @@ local function run(args)
         return nil, "Missing required arguments: user_id"
     end
 
-    -- Load config once at plugin start
     local base_config = consts.get_config()
 
     local state = {
@@ -119,28 +118,23 @@ local function run(args)
     end
 
     local function create_session_in_db(session_id, token_data)
-        -- Create primary context first
         local primary_context_id, ctx_err = uuid.v7()
         if ctx_err then
             return nil, "Failed to generate context ID: " .. ctx_err
         end
 
-        -- Prepare context data (merge contexts, token takes precedence)
         local context_data = {}
         if token_data.context then
             context_data = token_data.context
         end
 
-        -- Create the primary context
         local context, err = context_repo.create(primary_context_id, consts.CONTEXT_TYPES.SESSION,
             json.encode(context_data))
         if err then
             return nil, "Failed to create primary context: " .. err
         end
 
-        -- Store plugin config + agent/model in session config field
         local session_config = {
-            -- Plugin config from base_config
             token_checkpoint_threshold = state.base_config.token_checkpoint_threshold,
             max_message_limit = state.base_config.max_message_limit,
             checkpoint_function_id = state.base_config.checkpoint_function_id,
@@ -149,16 +143,13 @@ local function run(args)
             enable_agent_cache = state.base_config.enable_agent_cache,
             delegation_description_suffix = state.base_config.delegation_description_suffix,
 
-            -- Agent/model config from token
             agent_id = token_data.agent or "",
             model = token_data.model or "",
             init_func_id = token_data.init_func or nil,
         }
 
-        -- Store session runtime data in meta field (no kind - it's a column now)
         local session_meta = {}
 
-        -- Create the session with kind as separate parameter
         local session, err = session_repo.create(
             session_id,
             state.user_id,
@@ -169,7 +160,6 @@ local function run(args)
             session_config
         )
         if err then
-            -- Cleanup context if session creation fails
             context_repo.delete(primary_context_id)
             return nil, "Failed to create session: " .. err
         end
@@ -177,12 +167,45 @@ local function run(args)
         return session
     end
 
+    local function reset_session_status_if_crashed(session_id, existing_session)
+        -- If session exists in DB but not in active sessions, it likely crashed
+        -- Reset status to IDLE to ensure clean recovery
+        if existing_session and not state.active_sessions[session_id] then
+            local current_meta = existing_session.meta or {}
+            if current_meta.status and current_meta.status ~= consts.STATUS.IDLE then
+                logger:info("detected crashed session - resetting status to idle", {
+                    user_id = state.user_id,
+                    session_id = session_id,
+                    previous_status = current_meta.status
+                })
+
+                local success, err = session_repo.update_session_meta(session_id, { status = consts.STATUS.IDLE })
+                if not success then
+                    logger:warn("failed to reset session status after crash", {
+                        session_id = session_id,
+                        error = err
+                    })
+                    return false, "Failed to reset session status: " .. (err or "unknown error")
+                end
+
+                -- Notify hub of status reset if available
+                if state.user_hub_pid then
+                    process.send(state.user_hub_pid, consts.TOPIC_PREFIXES.SESSION .. session_id, {
+                        type = consts.UPSTREAM_TYPES.UPDATE,
+                        session_id = session_id,
+                        status = consts.STATUS.IDLE
+                    })
+                end
+            end
+        end
+        return true, nil
+    end
+
     local function create_session(payload_data)
         if not payload_data then
             return nil, "Payload data is required"
         end
 
-        -- Cancel shutdown timer if running (new session activity)
         if state.shutting_down then
             cancel_shutdown_timer()
             logger:info("cancelled shutdown - new session activity", { user_id = state.user_id })
@@ -213,9 +236,18 @@ local function run(args)
             return session_id, nil
         end
 
-        -- Check if session exists in database
         local existing_session, _ = session_repo.get(session_id, state.user_id)
         local session_exists = existing_session ~= nil
+
+        -- Handle crash recovery: reset status if session exists but isn't active
+        if session_exists then
+            local reset_success, reset_err = reset_session_status_if_crashed(session_id, existing_session)
+            if not reset_success then
+                send_error(payload_data.conn_pid, consts.ERROR_CODES.SESSION_SPAWN,
+                    "Failed to recover crashed session: " .. reset_err, payload_data.request_id)
+                return nil, reset_err
+            end
+        end
 
         local create_new_session = not session_exists
 
@@ -226,14 +258,12 @@ local function run(args)
                 return nil, "Start token required"
             end
 
-            -- Unpack start token
             local token_data, err = unpack_start_token(payload_data.start_token)
             if err then
                 send_error(payload_data.conn_pid, consts.ERROR_CODES.TOKEN_INVALID, err, payload_data.request_id)
                 return nil, err
             end
 
-            -- Create session and context in database with config/meta
             local _, session_create_err = create_session_in_db(session_id, token_data)
             if session_create_err then
                 send_error(payload_data.conn_pid, consts.ERROR_CODES.SESSION_SPAWN,
@@ -242,7 +272,6 @@ local function run(args)
             end
         end
 
-        -- Minimal session init - only what session process needs
         local session_init = {
             session_id = session_id,
             user_id = state.user_id,
@@ -251,7 +280,6 @@ local function run(args)
             parent_pid = process.pid()
         }
 
-        -- Only pass create flag for new sessions
         if create_new_session then
             session_init.create = true
             session_init.start_token = payload_data.start_token
@@ -350,7 +378,6 @@ local function run(args)
             return
         end
 
-        -- Cancel shutdown timer on any activity
         if state.shutting_down then
             cancel_shutdown_timer()
             logger:info("cancelled shutdown - message activity", { user_id = state.user_id, topic_type = topic_type })
@@ -362,7 +389,6 @@ local function run(args)
 
         logger:debug("routing message", { user_id = state.user_id, session_id = session_id, topic_type = topic_type })
 
-        -- Auto-start if no session specified and no active sessions
         if not session_id and state.session_count == 0 then
             local created_session_id, err = create_session(payload_data)
             if err then
@@ -370,7 +396,6 @@ local function run(args)
             end
             session_id = created_session_id
         elseif not session_id then
-            -- Use most recently active session
             local most_recent_id = nil
             local most_recent_time = nil
 
@@ -409,8 +434,38 @@ local function run(args)
                 process.send(session_info.pid, consts.TOPICS.COMMAND, cmd_data)
             end
         else
-            send_error(conn_pid, consts.ERROR_CODES.SESSION_NOT_FOUND,
-                "Session not found: " .. session_id, request_id)
+            -- Session ID provided but not in active sessions - try to recover
+            logger:info("attempting to recover inactive session", { user_id = state.user_id, session_id = session_id })
+            local created_session_id, err = create_session(payload_data)
+            if err then
+                send_error(conn_pid, consts.ERROR_CODES.SESSION_NOT_FOUND,
+                    "Session not found and recovery failed: " .. err, request_id)
+                return
+            end
+
+            -- Retry the message/command with the recovered session
+            local recovered_session_info = state.active_sessions[created_session_id]
+            if recovered_session_info then
+                update_session_activity(created_session_id)
+
+                if topic_type == consts.HANDLER_TYPES.MESSAGE then
+                    process.send(recovered_session_info.pid, consts.TOPICS.MESSAGE, {
+                        conn_pid = conn_pid,
+                        data = payload_data.data,
+                        request_id = request_id
+                    })
+                elseif topic_type == consts.HANDLER_TYPES.COMMAND then
+                    local cmd_data = payload_data.data or {}
+                    cmd_data.conn_pid = conn_pid
+                    if request_id then
+                        cmd_data.request_id = request_id
+                    end
+                    process.send(recovered_session_info.pid, consts.TOPICS.COMMAND, cmd_data)
+                end
+            else
+                send_error(conn_pid, consts.ERROR_CODES.SESSION_NOT_FOUND,
+                    "Session recovery failed", request_id)
+            end
         end
     end
 
@@ -499,6 +554,23 @@ local function run(args)
                             err = tostring(event.result.error)
                         end
 
+                        -- Update session status in database based on termination reason
+                        local target_status
+                        if event.result and event.result.error then
+                            target_status = consts.STATUS.FAILED
+                        else
+                            target_status = consts.STATUS.IDLE
+                        end
+
+                        local success, status_err = session_repo.update_session_meta(session_id, { status = target_status })
+                        if not success then
+                            logger:warn("failed to update session status", {
+                                session_id = session_id,
+                                target_status = target_status,
+                                error = status_err
+                            })
+                        end
+
                         state.active_sessions[session_id] = nil
                         state.session_count = state.session_count - 1
 
@@ -506,10 +578,21 @@ local function run(args)
                             user_id = state.user_id,
                             session_id = session_id,
                             reason = err,
+                            status_updated = target_status,
                             active_sessions = state.session_count
                         })
 
                         if state.user_hub_pid then
+                            -- Send session status update first
+                            if success then
+                                process.send(state.user_hub_pid, consts.TOPIC_PREFIXES.SESSION .. session_id, {
+                                    type = consts.UPSTREAM_TYPES.UPDATE,
+                                    session_id = session_id,
+                                    status = target_status
+                                })
+                            end
+
+                            -- Then send session closed notification
                             process.send(state.user_hub_pid, consts.TOPICS.SESSION_CLOSED, {
                                 session_id = session_id,
                                 reason = err,
@@ -517,7 +600,6 @@ local function run(args)
                             })
                         end
 
-                        -- Only shutdown immediately if not in controlled shutdown mode
                         if state.session_count == 0 and not state.shutting_down then
                             gc_ticker:stop()
                             logger:info("plugin shutting down - no active sessions", { user_id = state.user_id })
