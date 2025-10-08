@@ -1,25 +1,24 @@
-name: Release Module
+name: Publish in the Wippy Registry
 
 on:
   push:
     tags:
       - 'v*'
 
-jobs:
-  release:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
+concurrency:
+  group: publish
 
-      - name: Release module
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Publishing
         uses: wippyai/action-module-release@main
         with:
-          repository: ${{ github.repository }}
+          directory: .
           tag: ${{ github.ref_name }}
-          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
-          module_id: ${{ secrets.MODULE_ID }}
           username: ${{ secrets.WIPPY_USERNAME }}
           password: ${{ secrets.WIPPY_PASSWORD }}
