@@ -32,9 +32,9 @@ function artifact_repo.create(artifact_id, session_id, kind, title, content, met
     if not actor then
         return nil, "No authenticated user found"
     end
-    local user_id = actor:id()
 
-    -- Convert meta to JSON if it's a table
+    local user_id
+
     local meta_json = nil
     if meta then
         if type(meta) == "table" then
@@ -53,9 +53,8 @@ function artifact_repo.create(artifact_id, session_id, kind, title, content, met
         return nil, err
     end
 
-    -- Check if session exists
     if session_id and session_id ~= "" then
-        local check_query = sql.builder.select("session_id")
+        local check_query = sql.builder.select("session_id", "user_id")
             :from("sessions")
             :where("session_id = ?", session_id)
 
@@ -71,11 +70,14 @@ function artifact_repo.create(artifact_id, session_id, kind, title, content, met
             db:release()
             return nil, "Session not found"
         end
+
+        user_id = sessions[1].user_id
+    else
+        user_id = actor:id()
     end
 
     local now = time.now():format(time.RFC3339)
 
-    -- Build the INSERT query
     local insert_query = sql.builder.insert("artifacts")
         :set_map({
             artifact_id = artifact_id,
@@ -89,7 +91,6 @@ function artifact_repo.create(artifact_id, session_id, kind, title, content, met
             updated_at = now
         })
 
-    -- Execute the query
     local insert_executor = insert_query:run_with(db)
     local result, err = insert_executor:exec()
 
