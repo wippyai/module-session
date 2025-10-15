@@ -136,3 +136,20 @@ entries:
     imports:
       migration: wippy.migration:migration
     method: migrate
+
+  # wippy.session.migration:09_add_user_id_to_artifacts_table
+  - name: 09_add_user_id_to_artifacts_table
+    kind: function.lua
+    meta:
+      type: migration
+      tags:
+        - sessions
+      description: Add user_id to artifacts table and make session_id optional
+      depends_on:
+        - ns:wippy.migration
+        - wippy.session.migration:05_create_artifacts_table
+      timestamp: "2025-10-15T10:45:00Z"
+    source: file://09_add_user_id_to_artifacts_table.lua
+    imports:
+      migration: wippy.migration:migration
+    method: migrate
