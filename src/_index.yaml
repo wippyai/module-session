@@ -26,6 +26,8 @@ entries:
         path: ".meta.target_db"
       - entry: wippy.session.migration:08_remove_legacy_session_fields
         path: ".meta.target_db"
+      - entry: wippy.session.migration:09_add_user_id_to_artifacts_table
+        path: ".meta.target_db"
     default: "app:db"
 
   - name: token_checkpoint_threshold
