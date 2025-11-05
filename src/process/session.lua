@@ -115,11 +115,11 @@ local function run(args)
             })
         end
 
-        if args.init_function then
+        if session_data.config.init_function_id and session_data.config.init_function_id ~= "" then
             bus:queue_op({
                 type = consts.OP_TYPE.EXECUTE_FUNCTION,
-                function_id = args.init_function.name,
-                function_params = args.init_function.params
+                function_id = session_data.config.init_function_id,
+                function_params = session_data.config.init_function_params,
             })
         end
     end

@@ -145,7 +145,8 @@ local function run(args)
 
             agent_id = token_data.agent or "",
             model = token_data.model or "",
-            init_func_id = token_data.init_func or nil,
+            init_function_id = token_data.start_func or nil,
+            init_function_params = token_data.start_params or nil,
         }
 
         local session_meta = {}
