@@ -18,7 +18,7 @@ return require("migration").define(function()
                 _, err = db:execute([[
                     ALTER TABLE artifacts
                     ADD CONSTRAINT fk_artifacts_user
-                    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL
+                    FOREIGN KEY (user_id) REFERENCES app_users(user_id) ON DELETE SET NULL
                 ]])
                 if err then
                     error(err)
@@ -128,7 +128,7 @@ return require("migration").define(function()
                         created_at INTEGER NOT NULL,
                         updated_at INTEGER NOT NULL,
                         FOREIGN KEY (session_id) REFERENCES sessions(session_id),
-                        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL
+                        FOREIGN KEY (user_id) REFERENCES app_users(user_id) ON DELETE SET NULL
                     )
                 ]])
                 if err then

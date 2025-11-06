@@ -16,7 +16,7 @@ return require("migration").define(function()
                         public_meta TEXT DEFAULT '[]',
                         start_date timestamp NOT NULL default now(),
                         last_message_date timestamp,
-                        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+                        FOREIGN KEY (user_id) REFERENCES app_users(user_id) ON DELETE CASCADE,
                         FOREIGN KEY (primary_context_id) REFERENCES contexts(context_id) ON DELETE CASCADE
                     );
                 ]])
@@ -83,7 +83,7 @@ return require("migration").define(function()
                         public_meta TEXT DEFAULT '[]',
                         start_date INTEGER NOT NULL,
                         last_message_date INTEGER,
-                        FOREIGN KEY (user_id) REFERENCES users(user_id),
+                        FOREIGN KEY (user_id) REFERENCES app_users(user_id),
                         FOREIGN KEY (primary_context_id) REFERENCES contexts(context_id)
                     )
                 ]])
