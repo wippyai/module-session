@@ -57,7 +57,7 @@ return require("migration").define(function()
                         meta TEXT DEFAULT '{}',
                         start_date INTEGER NOT NULL,
                         last_message_date INTEGER,
-                        FOREIGN KEY (user_id) REFERENCES users(user_id),
+                        FOREIGN KEY (user_id) REFERENCES app_users(user_id),
                         FOREIGN KEY (primary_context_id) REFERENCES contexts(context_id)
                     )
                 ]])
@@ -128,7 +128,7 @@ return require("migration").define(function()
                         meta TEXT DEFAULT '{}',
                         start_date INTEGER NOT NULL,
                         last_message_date INTEGER,
-                        FOREIGN KEY (user_id) REFERENCES users(user_id),
+                        FOREIGN KEY (user_id) REFERENCES app_users(user_id),
                         FOREIGN KEY (primary_context_id) REFERENCES contexts(context_id)
                     )
                 ]])
