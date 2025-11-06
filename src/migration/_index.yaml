@@ -12,7 +12,7 @@ entries:
       description: Create contexts table with indexes
       depends_on:
         - ns:wippy.migration
-      timestamp: "2025-09-14T10:00:00Z"
+      timestamp: "2025-03-16T10:00:00Z"
     source: file://01_create_contexts_table.lua
     imports:
       migration: wippy.migration:migration
@@ -29,7 +29,7 @@ entries:
       depends_on:
         - ns:wippy.migration
         - wippy.session.migration:01_create_contexts_table
-      timestamp: "2025-09-14T10:05:00Z"
+      timestamp: "2025-03-16T10:05:00Z"
     source: file://02_create_sessions_table.lua
     imports:
       migration: wippy.migration:migration
@@ -46,7 +46,7 @@ entries:
       depends_on:
         - ns:wippy.migration
         - wippy.session.migration:02_create_sessions_table
-      timestamp: "2025-09-14T10:10:00Z"
+      timestamp: "2025-03-16T10:10:00Z"
     source: file://03_create_session_contexts_table.lua
     imports:
       migration: wippy.migration:migration
@@ -63,7 +63,7 @@ entries:
       depends_on:
         - ns:wippy.migration
         - wippy.session.migration:02_create_sessions_table
-      timestamp: "2025-09-14T10:20:00Z"
+      timestamp: "2025-03-16T10:20:00Z"
     source: file://04_create_messages_table.lua
     imports:
       migration: wippy.migration:migration
@@ -80,7 +80,7 @@ entries:
       depends_on:
         - ns:wippy.migration
         - wippy.session.migration:02_create_sessions_table
-      timestamp: "2025-09-14T10:25:00Z"
+      timestamp: "2025-03-16T10:25:00Z"
     source: file://05_create_artifacts_table.lua
     imports:
       migration: wippy.migration:migration
@@ -97,7 +97,7 @@ entries:
       depends_on:
         - ns:wippy.migration
         - wippy.session.migration:02_create_sessions_table
-      timestamp: "2025-09-14T10:30:00Z"
+      timestamp: "2025-03-16T10:30:00Z"
     source: file://06_add_session_config_meta_fields.lua
     imports:
       migration: wippy.migration:migration
@@ -114,7 +114,7 @@ entries:
       depends_on:
         - ns:wippy.migration
         - wippy.session.migration:06_add_session_config_meta_fields
-      timestamp: "2025-09-14T10:35:00Z"
+      timestamp: "2025-03-16T10:35:00Z"
     source: file://07_migrate_session_data_to_new_structure.lua
     imports:
       migration: wippy.migration:migration
@@ -131,7 +131,7 @@ entries:
       depends_on:
         - ns:wippy.migration
         - wippy.session.migration:07_migrate_session_data_to_new_structure
-      timestamp: "2025-09-14T10:40:00Z"
+      timestamp: "2025-03-16T10:40:00Z"
     source: file://08_remove_legacy_session_fields.lua
     imports:
       migration: wippy.migration:migration
@@ -148,7 +148,7 @@ entries:
       depends_on:
         - ns:wippy.migration
         - wippy.session.migration:05_create_artifacts_table
-      timestamp: "2025-09-14T10:45:00Z"
+      timestamp: "2025-10-15T10:45:00Z"
     source: file://09_add_user_id_to_artifacts_table.lua
     imports:
       migration: wippy.migration:migration
