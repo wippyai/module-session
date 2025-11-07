@@ -61,7 +61,7 @@ function message_repo.create(message_id, session_id, msg_type, data, metadata)
         return nil, "Failed to begin transaction: " .. err
     end
 
-    local now = time.now():format(time.RFC3339)
+    local now = time.now():format(time.RFC3339NANO)
 
     -- Build the INSERT query
     local insert_query = sql.builder.insert("messages")
