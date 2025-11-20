@@ -27,7 +27,6 @@ local function run(args)
     process.set_options({ trap_links = true })
 
     local gc_ticker = time.ticker(base_config.gc_interval)
-    local shutdown_timer = nil
     local inbox = process.inbox()
     local events = process.events()
 
@@ -55,12 +54,25 @@ local function run(args)
         end
     end
 
-    local function cancel_shutdown_timer()
-        if shutdown_timer then
-            shutdown_timer:stop()
-            shutdown_timer = nil
-            state.shutting_down = false
+    local function graceful_terminate_session(session_id, session_info, reason)
+        if not session_info or not session_info.pid then
+            return
         end
+
+        if session_info.terminating then
+            return
+        end
+
+        session_info.terminating = true
+        session_info.terminate_reason = reason
+
+        logger:info("initiating graceful session termination", {
+            user_id = state.user_id,
+            session_id = session_id,
+            reason = reason
+        })
+
+        process.send(session_info.pid, consts.TOPICS.FINISH_AND_EXIT, {})
     end
 
     local function get_oldest_session()
@@ -83,24 +95,13 @@ local function run(args)
             local oldest_id = get_oldest_session()
             if oldest_id then
                 local session_info = state.active_sessions[oldest_id]
-                if session_info and session_info.pid then
-                    process.cancel(session_info.pid, consts.TIMEOUTS.CANCEL)
+                if session_info then
+                    graceful_terminate_session(oldest_id, session_info, "limit_exceeded")
+                    state.active_sessions[oldest_id] = nil
+                    state.session_count = state.session_count - 1
                 end
-                state.active_sessions[oldest_id] = nil
-                state.session_count = state.session_count - 1
-                logger:info("evicted old session due to limit", { user_id = state.user_id, session_id = oldest_id })
             else
                 break
-            end
-        end
-    end
-
-    local function shutdown_all_sessions()
-        logger:info("shutdown timeout expired - terminating sessions",
-            { user_id = state.user_id, active_sessions = state.session_count })
-        for session_id, session_info in pairs(state.active_sessions) do
-            if session_info.pid then
-                process.cancel(session_info.pid, consts.TIMEOUTS.CANCEL)
             end
         end
     end
@@ -207,11 +208,6 @@ local function run(args)
             return nil, "Payload data is required"
         end
 
-        if state.shutting_down then
-            cancel_shutdown_timer()
-            logger:info("cancelled shutdown - new session activity", { user_id = state.user_id })
-        end
-
         enforce_session_limit()
 
         local session_id = payload_data.session_id
@@ -313,7 +309,9 @@ local function run(args)
             state.active_sessions[session_id] = {
                 pid = session_pid,
                 created_at = now,
-                last_activity = now
+                last_activity = now,
+                terminating = false,
+                terminate_reason = nil
             }
             state.session_count = state.session_count + 1
 
@@ -351,20 +349,8 @@ local function run(args)
         local session_info = state.active_sessions[session_id]
         if session_info then
             if state.session_count > 1 then
-                process.cancel(session_info.pid, consts.TIMEOUTS.CANCEL)
-                state.active_sessions[session_id] = nil
-                state.session_count = state.session_count - 1
-
-                logger:info("session closed",
-                    { user_id = state.user_id, session_id = session_id, active_sessions = state.session_count })
-
-                if state.user_hub_pid then
-                    process.send(state.user_hub_pid, consts.TOPICS.SESSION_CLOSED, {
-                        session_id = session_id,
-                        active_session_ids = get_active_session_ids(),
-                        request_id = request_id
-                    })
-                end
+                graceful_terminate_session(session_id, session_info, "user_closed")
+                logger:info("session close requested", { user_id = state.user_id, session_id = session_id })
             else
                 logger:debug("keeping last session active", { user_id = state.user_id, session_id = session_id })
             end
@@ -377,11 +363,6 @@ local function run(args)
     local function handle_message_or_command(payload_data, topic_type)
         if not payload_data then
             return
-        end
-
-        if state.shutting_down then
-            cancel_shutdown_timer()
-            logger:info("cancelled shutdown - message activity", { user_id = state.user_id, topic_type = topic_type })
         end
 
         local conn_pid = payload_data.conn_pid
@@ -491,24 +472,18 @@ local function run(args)
 
         for _, session_id in ipairs(to_remove) do
             local session_info = state.active_sessions[session_id]
-            if session_info and session_info.pid then
-                process.cancel(session_info.pid, consts.TIMEOUTS.CANCEL)
+            if session_info then
+                graceful_terminate_session(session_id, session_info, "inactivity")
             end
         end
     end
 
     while true do
-        local channels = {
+        local result = channel.select({
             inbox:case_receive(),
             events:case_receive(),
             gc_ticker:channel():case_receive()
-        }
-
-        if shutdown_timer then
-            table.insert(channels, shutdown_timer:channel():case_receive())
-        end
-
-        local result = channel.select(channels)
+        })
 
         if not result.ok then
             break
@@ -532,12 +507,15 @@ local function run(args)
             elseif topic == consts.PLUGIN_TOPICS.COMMAND then
                 handle_message_or_command(payload:data(), consts.HANDLER_TYPES.COMMAND)
             elseif topic == consts.PLUGIN_TOPICS.SHUTDOWN then
-                logger:info("received shutdown signal - starting grace period", { user_id = state.user_id })
+                logger:info("received shutdown signal - notifying sessions to finish", { user_id = state.user_id })
                 state.shutting_down = true
-                shutdown_timer = time.timer(consts.TIMEOUTS.SHUTDOWN_GRACE)
+
+                for session_id, session_info in pairs(state.active_sessions) do
+                    graceful_terminate_session(session_id, session_info, "shutdown")
+                end
             elseif topic == consts.PLUGIN_TOPICS.RESUME then
                 if state.shutting_down then
-                    cancel_shutdown_timer()
+                    state.shutting_down = false
                     logger:info("cancelled shutdown - client reconnected", { user_id = state.user_id })
                 end
             elseif string.sub(topic, 1, string.len(consts.TOPIC_PREFIXES.SESSION)) == consts.TOPIC_PREFIXES.SESSION then
@@ -601,7 +579,7 @@ local function run(args)
                             })
                         end
 
-                        if state.session_count == 0 and not state.shutting_down then
+                        if state.session_count == 0 then
                             gc_ticker:stop()
                             logger:info("plugin shutting down - no active sessions", { user_id = state.user_id })
                             return { status = "shutdown", user_id = state.user_id, reason = "no_active_sessions" }
@@ -614,27 +592,11 @@ local function run(args)
             end
         elseif result.channel == gc_ticker:channel() then
             check_inactive_sessions()
-        elseif shutdown_timer and result.channel == shutdown_timer:channel() then
-            logger:info("shutdown grace period expired - terminating sessions", { user_id = state.user_id })
-            shutdown_timer:stop()
-            shutdown_timer = nil
-            shutdown_all_sessions()
-            break
         end
     end
 
     gc_ticker:stop()
-
-    if shutdown_timer then
-        shutdown_timer:stop()
-    end
-
     logger:info("plugin shutting down", { user_id = state.user_id, active_sessions = state.session_count })
-
-    for session_id, session_info in pairs(state.active_sessions) do
-        process.cancel(session_info.pid, consts.TIMEOUTS.CANCEL)
-    end
-
     return { status = "shutdown", user_id = state.user_id }
 end
 

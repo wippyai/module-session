@@ -10,6 +10,7 @@ function command_bus.new(context)
     self.stop_signal = channel.new()
 
     self.stopping = false
+    self.finishing = false
     self.intercepted = false
     self.intercept_handler = nil
 
@@ -30,6 +31,9 @@ end
 function command_bus:queue_op(op)
     if self.stopping then
         return false, "Command bus is stopping"
+    end
+    if self.finishing and not op.internal then
+        return false, "Command bus is finishing"
     end
     self.ops_channel:send(op)
     self.pending_ops = self.pending_ops + 1
@@ -122,6 +126,17 @@ function command_bus:stop()
     self.stop_signal:send(true)
 end
 
+function command_bus:finish()
+    if self.finishing or self.stopping then
+        return
+    end
+    self.finishing = true
+
+    if self.pending_ops == 0 then
+        self:stop()
+    end
+end
+
 function command_bus:run()
     while not self.stopping do
         local result = channel.select({
@@ -147,8 +162,14 @@ function command_bus:run()
             end
 
             -- Check if all operations processed and call callback if available
-            if self.pending_ops == 0 and self.context.queue_empty_callback then
-                self.context.queue_empty_callback()
+            if self.pending_ops == 0 then
+                if self.context.queue_empty_callback then
+                    self.context.queue_empty_callback()
+                end
+
+                if self.finishing then
+                    self:stop()
+                end
             end
         end
     end
