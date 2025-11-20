@@ -7,7 +7,7 @@ function command_bus.new(context)
     self.context = context
 
     self.ops_channel = channel.new(256)
-    self.stop_signal = channel.new()
+    self.stop_signal = channel.new(1)
 
     self.stopping = false
     self.finishing = false
