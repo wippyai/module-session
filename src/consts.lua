@@ -115,7 +115,8 @@ local consts = {
         CONTEXT = "context",
         ERROR = "error",
         SESSION_OPENED = "session.opened",
-        SESSION_CLOSED = "session.closed"
+        SESSION_CLOSED = "session.closed",
+        FINISH_AND_EXIT = "finish_and_exit"
     },
 
     -- Upstream Update Types

@@ -135,7 +135,11 @@ local function run(args)
 
     process.registry.register("session." .. args.session_id)
 
-    local session_state = { stopping = false }
+    local session_state = {
+        stopping = false,
+        finishing = false,
+        bus_done_received = false
+    }
     local bus_done = channel.new()
 
     coroutine.spawn(function()
@@ -152,7 +156,8 @@ local function run(args)
     while not session_state.stopping do
         local result = channel.select({
             inbox:case_receive(),
-            events:case_receive()
+            events:case_receive(),
+            bus_done:case_receive()
         })
 
         if not result.ok then
@@ -170,15 +175,22 @@ local function run(args)
                     session_upstream.conn_pid = payload_data.conn_pid
                 end
 
-                -- Set RUNNING status when user message received
-                session_writer:update_status(consts.STATUS.RUNNING)
-                session_upstream:update_session({ status = consts.STATUS.RUNNING })
+                -- Reject messages if session is finishing
+                if session_state.finishing then
+                    if payload_data.request_id then
+                        session_upstream:command_error(payload_data.request_id, "SESSION_FINISHING", "Session is finishing and cannot accept new messages")
+                    end
+                else
+                    -- Set RUNNING status when user message received
+                    session_writer:update_status(consts.STATUS.RUNNING)
+                    session_upstream:update_session({ status = consts.STATUS.RUNNING })
 
-                bus:queue_op({
-                    type = consts.OP_TYPE.HANDLE_MESSAGE,
-                    data = payload_data.data,
-                    request_id = payload_data.request_id
-                })
+                    bus:queue_op({
+                        type = consts.OP_TYPE.HANDLE_MESSAGE,
+                        data = payload_data.data,
+                        request_id = payload_data.request_id
+                    })
+                end
             elseif topic == consts.TOPICS.COMMAND then
                 local payload_data = payload:data()
                 if payload_data.conn_pid then
@@ -237,6 +249,9 @@ local function run(args)
                         session_upstream:command_error(payload_data.request_id, consts.ERROR_CODES.INVALID_JSON, "Either artifact_id or artifacts array required")
                     end
                 end
+            elseif topic == consts.TOPICS.FINISH_AND_EXIT then
+                session_state.finishing = true
+                bus:finish()
             elseif topic == consts.TOPICS.CONTINUE then
                 print("Continue signal received")
             elseif topic == consts.TOPICS.STOP then
@@ -254,10 +269,19 @@ local function run(args)
             elseif event.kind == process.event.LINK_DOWN then
                 print("Linked process failed:", event.from)
             end
+        elseif result.channel == bus_done then
+            session_state.bus_done_received = true
+            if session_state.finishing then
+                session_state.stopping = true
+                break
+            end
         end
     end
 
-    bus_done:receive()
+    if not session_state.bus_done_received then
+        bus_done:receive()
+    end
+
     return { status = "shutdown", session_id = args.session_id }
 end
 
