@@ -94,7 +94,7 @@ local function run(args)
     bus:mount_op_handler(consts.OP_TYPE.CREATE_CHECKPOINT, session_handlers.create_checkpoint)
     bus:mount_op_handler(consts.OP_TYPE.CHECK_BACKGROUND_TRIGGERS, session_handlers.check_background_triggers)
     bus:mount_op_handler(consts.OP_TYPE.EXECUTE_FUNCTION, session_handlers.execute_function)
-    bus:mount_op_handler(consts.OP_TYPE.HANDLE_CONTEXT_COMMAND, control_handlers.handle_context_command)
+    bus:mount_op_handler(consts.OP_TYPE.HANDLE_CONTEXT, control_handlers.handle_context_command)
 
     if args.create then
         session_writer:update_status(consts.STATUS.IDLE)
@@ -199,7 +199,7 @@ local function run(args)
 
                 if payload_data.command == consts.COMMANDS.CONTEXT then
                     bus:queue_op({
-                        type = consts.OP_TYPE.HANDLE_CONTEXT_COMMAND,
+                        type = consts.OP_TYPE.HANDLE_CONTEXT,
                         action = payload_data.action,
                         key = payload_data.key,
                         data = payload_data.data,
