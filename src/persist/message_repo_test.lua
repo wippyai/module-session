@@ -43,9 +43,7 @@ local function define_tests()
                 test_data.user_id,
                 test_data.context_id,
                 "Test Session",
-                "test",
-                "test-model",
-                "test-agent"
+                "test"
             )
 
             if err then
@@ -179,10 +177,11 @@ local function define_tests()
             expect(err).to_be_nil()
             expect(result).not_to_be_nil()
             expect(result.messages).not_to_be_nil()
-            expect(#result.messages > 3).to_be_true() -- Should have multiple messages
+            expect(#result.messages > 3).to_be_true()
 
             -- Extract cursor from first result
-            local cursor = result.messages[3].message_id -- before 2 will be the first message only
+            assert(result.messages)
+            local cursor = result.messages[3].message_id
 
             -- Test "before" pagination (older messages)
             local before_result, err = message_repo.list_by_session(test_data.session_id, 2, cursor, "before")
@@ -197,14 +196,11 @@ local function define_tests()
             expect(err).to_be_nil()
             expect(after_result).not_to_be_nil()
             expect(after_result.messages).not_to_be_nil()
-            -- The number of items depends on message creation order, so check it exists
-            expect(after_result.messages).not_to_be_nil()
 
             -- Test pagination with limit
             local limit_result, err = message_repo.list_by_session(test_data.session_id, 3)
             expect(err).to_be_nil()
             expect(limit_result).not_to_be_nil()
-            -- expect(limit_result.items).not_to_be_nil() -- there are no items in result
             expect(#limit_result.messages).to_equal(3)
 
             -- Clean up the test messages
@@ -218,12 +214,14 @@ local function define_tests()
 
             expect(err).to_be_nil()
             expect(messages).not_to_be_nil()
+            assert(messages)
             expect(#messages).to_equal(1)
             expect(messages[1].type).to_equal("user")
 
             messages, err = message_repo.list_by_type(test_data.session_id, "assistant")
             expect(err).to_be_nil()
             expect(messages).not_to_be_nil()
+            assert(messages)
             expect(#messages).to_equal(1)
             expect(messages[1].type).to_equal("assistant")
         end)
@@ -275,7 +273,7 @@ local function define_tests()
             -- Verify the deletion
             message, err = message_repo.get(test_data.message_id)
             expect(message).to_be_nil()
-            expect(err:match("not found")).not_to_be_nil()
+            test.contains(tostring(err), "not found")
 
             -- Count should now be 1
             local count, err = message_repo.count_by_session(test_data.session_id)
@@ -287,42 +285,42 @@ local function define_tests()
             -- Missing message_id
             local message, err = message_repo.create(nil, test_data.session_id, "user", "data")
             expect(message).to_be_nil()
-            expect(err:match("Message ID is required")).not_to_be_nil()
+            test.contains(tostring(err), "Message ID is required")
 
             -- Missing session_id
             message, err = message_repo.create(uuid.v7(), "", "user", "data")
             expect(message).to_be_nil()
-            expect(err:match("Session ID is required")).not_to_be_nil()
+            test.contains(tostring(err), "Session ID is required")
 
             -- Missing type
             message, err = message_repo.create(uuid.v7(), test_data.session_id, "", "data")
             expect(message).to_be_nil()
-            expect(err:match("Message type is required")).not_to_be_nil()
+            test.contains(tostring(err), "Message type is required")
 
             -- Missing data
             message, err = message_repo.create(uuid.v7(), test_data.session_id, "user", nil)
             expect(message).to_be_nil()
-            expect(err:match("Message data is required")).not_to_be_nil()
+            test.contains(tostring(err), "Message data is required")
 
             -- Non-existent session
             message, err = message_repo.create(uuid.v7(), uuid.v7(), "user", "data")
             expect(message).to_be_nil()
-            expect(err).not_to_be_nil() -- pg exception expecting too
+            expect(err).not_to_be_nil()
 
             -- Get with invalid ID
             message, err = message_repo.get("")
             expect(message).to_be_nil()
-            expect(err:match("Message ID is required")).not_to_be_nil()
+            test.contains(tostring(err), "Message ID is required")
 
             -- List by invalid session ID
             local messages, err = message_repo.list_by_session("")
             expect(messages).to_be_nil()
-            expect(err:match("Session ID is required")).not_to_be_nil()
+            test.contains(tostring(err), "Session ID is required")
 
             -- Delete with invalid ID
             local result, err = message_repo.delete("")
             expect(result).to_be_nil()
-            expect(err:match("Message ID is required")).not_to_be_nil()
+            test.contains(tostring(err), "Message ID is required")
         end)
     end)
 end

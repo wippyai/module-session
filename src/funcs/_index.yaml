@@ -23,25 +23,15 @@ entries:
             "session_id": {
               "type": "string",
               "description": "The session ID to generate checkpoint for"
-            },
-            "first_msg_id": {
-              "type": "string",
-              "description": "The first message ID in the range to summarize"
-            },
-            "last_msg_id": {
-              "type": "string",
-              "description": "The last message ID in the range to summarize"
             }
           },
-          "required": ["session_id", "first_msg_id", "last_msg_id"]
+          "required": ["session_id"]
         }
       llm_alias: GenerateCheckpoint
       llm_description: Generate a comprehensive summary of a conversation range for context compression. Analyzes tool usage patterns, failed attempts, and creates structured summaries for efficient session management.
     source: file://checkpoint.lua
     modules:
       - json
-      - time
-      - security
     imports:
       prompt: wippy.llm:prompt
       llm: wippy.llm:llm
@@ -69,25 +59,14 @@ entries:
             "session_id": {
               "type": "string",
               "description": "The session ID to generate title for"
-            },
-            "first_msg_id": {
-              "type": "string",
-              "description": "The first message ID in the range to analyze"
-            },
-            "last_msg_id": {
-              "type": "string",
-              "description": "The last message ID in the range to analyze"
             }
           },
-          "required": ["session_id", "first_msg_id", "last_msg_id"]
+          "required": ["session_id"]
         }
       llm_alias: GenerateTitle
       llm_description: Generate a concise, descriptive title (3-8 words) for a conversation segment. Analyzes the main topics and purposes within the specified message range to create clear, specific titles.
     source: file://title.lua
-    modules:
-      - json
-      - time
-      - security
+    modules: []
     imports:
       prompt: wippy.llm:prompt
       llm: wippy.llm:llm

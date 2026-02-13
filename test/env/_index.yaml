@@ -1,0 +1,8 @@
+version: "1.0"
+namespace: app.env
+
+entries:
+  - name: router
+    kind: env.storage.os
+    meta:
+      comment: Stub environment storage for testing

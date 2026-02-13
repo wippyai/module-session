@@ -4,6 +4,22 @@ local artifact_repo = require("artifact_repo")
 local session_repo = require("session_repo")
 local security = require("security")
 
+type ArtifactMetadataResponse = {
+    uuid: string,
+    type: string,
+    title: string,
+    created_at: string,
+    updated_at: string,
+    content_version: number,
+    content_type: string?,
+    description: string?,
+    icon: string?,
+    status: string?,
+    page_id: string?,
+    is_view_reference: boolean?,
+    params: {[string]: any}?,
+}
+
 local function handler()
     -- Get response object
     local res = http.response()
@@ -123,7 +139,7 @@ local function handler()
 
             -- Also get the params if this is a view_ref
             if artifact.content and artifact.content ~= "" then
-                local params, decode_err = json.decode(artifact.content)
+                local params, decode_err = json.decode(artifact.content :: string)
                 if not decode_err then
                     response.params = params
                 end

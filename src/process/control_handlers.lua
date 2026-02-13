@@ -2,6 +2,22 @@ local json = require("json")
 local uuid = require("uuid")
 local consts = require("consts")
 
+type ArtifactData = {
+    id: string?,
+    title: string?,
+    content: string?,
+    content_type: string?,
+    description: string?,
+    icon: string?,
+    status: string?,
+    type: string?,
+    page_id: string?,
+    params: {[string]: any}?,
+    display_type: string?,
+    preview: string?,
+    instructions: boolean?,
+}
+
 local control_handlers = {}
 
 function control_handlers.handle_context_command(ctx, op)

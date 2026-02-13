@@ -1,5 +1,5 @@
-local json = require("json")
 local consts = require("consts")
+local logger = require("logger"):named("session.process")
 local reader = require("reader")
 local writer = require("writer")
 local upstream = require("upstream")
@@ -9,6 +9,15 @@ local control_handlers = require("control_handlers")
 local session_handlers = require("session_handlers")
 local agent_context = require("agent_context")
 local tools = require("tools")
+
+type SessionArgs = {
+    session_id: string,
+    user_id: string,
+    conn_pid: any?,
+    parent_pid: any?,
+    create: boolean?,
+    start_token: string?,
+}
 
 local function run(args)
     if not args or not args.user_id or not args.session_id then
@@ -36,7 +45,7 @@ local function run(args)
     local agent_ctx = agent_context.new({
         enable_cache = session_data.config.enable_agent_cache,
         context = {}
-    })
+    } :: any)
 
     -- Configure delegation if enabled
     if session_data.config.delegation_func_id then
@@ -145,7 +154,7 @@ local function run(args)
     coroutine.spawn(function()
         local _, bus_err = bus:run()
         if bus_err then
-            print("Command bus error:", bus_err)
+            logger:warn("command bus error", { error = bus_err })
         end
         bus_done:send(true)
     end)
@@ -253,7 +262,7 @@ local function run(args)
                 session_state.finishing = true
                 bus:finish()
             elseif topic == consts.TOPICS.CONTINUE then
-                print("Continue signal received")
+                logger:debug("continue signal received", { session_id = args.session_id })
             elseif topic == consts.TOPICS.STOP then
                 bus:intercept(intercept_handler)
             end
@@ -265,9 +274,9 @@ local function run(args)
                 bus:stop()
                 break
             elseif event.kind == process.event.EXIT then
-                print("Child process exited:", event.from)
+                logger:debug("child process exited", { from = event.from })
             elseif event.kind == process.event.LINK_DOWN then
-                print("Linked process failed:", event.from)
+                logger:warn("linked process failed", { from = event.from })
             end
         elseif result.channel == bus_done then
             session_state.bus_done_received = true

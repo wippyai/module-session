@@ -3,7 +3,22 @@ local json = require("json")
 local time = require("time")
 local consts = require("consts")
 
--- Constants
+type Message = {
+    message_id: string,
+    session_id: string,
+    date: string,
+    type: string,
+    data: string,
+    metadata: {[string]: any}?,
+}
+
+type MessageList = {
+    messages: {Message},
+    has_more: boolean,
+    next_cursor: string?,
+    prev_cursor: string?,
+}
+
 local message_repo = {}
 
 -- Get a database connection
@@ -159,7 +174,7 @@ function message_repo.get(message_id)
 
     -- Parse metadata JSON if it exists
     if message.metadata and message.metadata ~= "" then
-        local decoded, err = json.decode(message.metadata)
+        local decoded, err = json.decode(message.metadata :: string)
         if not err then
             message.metadata = decoded
         end
@@ -299,28 +314,30 @@ function message_repo.list_by_session(session_id, limit, cursor, direction)
     -- Parse metadata JSON if it exists
     for i, message in ipairs(messages) do
         if message.metadata and message.metadata ~= "" then
-            local decoded, err = json.decode(message.metadata)
+            local decoded, err = json.decode(message.metadata :: string)
             if not err then
                 message.metadata = decoded
             end
         end
     end
 
-    -- Determine next cursor values
+    -- Reverse to chronological ASC order when query used DESC
+    if not (cursor and direction == "after") then
+        local reversed = {}
+        for i = #messages, 1, -1 do
+            table.insert(reversed, messages[i])
+        end
+        messages = reversed
+    end
+
+    -- Cursors from chronological (ASC) order
     local next_cursor = nil
     local prev_cursor = nil
 
     if #messages > 0 then
-        next_cursor = messages[#messages].message_id -- Last item for "next" page
-        prev_cursor = messages[1].message_id         -- First item for "prev" page
+        next_cursor = messages[1].message_id       -- oldest in batch, for paging backwards
+        prev_cursor = messages[#messages].message_id -- newest in batch, for paging forwards
     end
-
-    -- todo: test properly
-    local reversed = {}
-    for i = #messages, 1, -1 do
-        table.insert(reversed, messages[i])
-    end
-    messages = reversed
 
     return {
         messages = messages,
@@ -371,7 +388,7 @@ function message_repo.list_after_message(session_id, after_message_id, limit)
     -- Parse metadata JSON if it exists
     for i, message in ipairs(messages) do
         if message.metadata and message.metadata ~= "" then
-            local decoded, err = json.decode(message.metadata)
+            local decoded, err = json.decode(message.metadata :: string)
             if not err then
                 message.metadata = decoded
             end
@@ -427,7 +444,7 @@ function message_repo.list_by_type(session_id, msg_type, limit, offset)
     -- Parse metadata JSON if it exists
     for i, message in ipairs(messages) do
         if message.metadata and message.metadata ~= "" then
-            local decoded, err = json.decode(message.metadata)
+            local decoded, err = json.decode(message.metadata :: string)
             if not err then
                 message.metadata = decoded
             end
@@ -479,7 +496,7 @@ function message_repo.get_latest(session_id)
 
     -- Parse metadata JSON if it exists
     if message.metadata and message.metadata ~= "" then
-        local decoded, err = json.decode(message.metadata)
+        local decoded, err = json.decode(message.metadata :: string)
         if not err then
             message.metadata = decoded
         end

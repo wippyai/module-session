@@ -23,7 +23,7 @@ local function define_tests()
             end
 
             -- Delete test contexts
-            db:execute("DELETE FROM contexts WHERE context_id IN (?, ?)",
+            db:execute("DELETE FROM contexts WHERE context_id IN ($1, $2)",
                 { test_data.context_id, test_data.context_id2 })
 
             db:release()
@@ -109,13 +109,15 @@ local function define_tests()
 
             -- Get first context
             contexts, err = context_repo.get_by_type("test_type", 1)
+            assert(contexts)
             first_context_id = contexts[1].context_id
 
             -- Get second context
             contexts, err = context_repo.get_by_type("test_type", 1, 1)
+            assert(contexts)
             second_context_id = contexts[1].context_id
 
-            expect(first_context_id).not_to_equal(second_context_id)
+            test.neq(first_context_id, second_context_id)
         end)
 
         it("should update context data", function()
@@ -145,44 +147,44 @@ local function define_tests()
             local context, err = context_repo.get(test_data.context_id2)
             expect(context).to_be_nil()
             expect(err).not_to_be_nil()
-            expect(err:match("not found")).not_to_be_nil()
+            test.contains(tostring(err), "not found")
         end)
 
         it("should handle validation errors", function()
             -- Missing context_id
             local context, err = context_repo.create(nil, "test_type", "data")
             expect(context).to_be_nil()
-            expect(err:match("Context ID is required")).not_to_be_nil()
+            test.contains(tostring(err), "Context ID is required")
 
             -- Missing type
             context, err = context_repo.create(uuid.v7(), "", "data")
             expect(context).to_be_nil()
-            expect(err:match("Context type is required")).not_to_be_nil()
+            test.contains(tostring(err), "Context type is required")
 
             -- Get with invalid ID
             context, err = context_repo.get("")
             expect(context).to_be_nil()
-            expect(err:match("Context ID is required")).not_to_be_nil()
+            test.contains(tostring(err), "Context ID is required")
 
             -- Update with invalid ID
             local result, err = context_repo.update("", "data")
             expect(result).to_be_nil()
-            expect(err:match("Context ID is required")).not_to_be_nil()
+            test.contains(tostring(err), "Context ID is required")
 
             -- Update non-existent context
             result, err = context_repo.update(uuid.v7(), "data")
             expect(result).to_be_nil()
-            expect(err:match("Context not found")).not_to_be_nil()
+            test.contains(tostring(err), "Context not found")
 
             -- Delete with invalid ID
             result, err = context_repo.delete("")
             expect(result).to_be_nil()
-            expect(err:match("Context ID is required")).not_to_be_nil()
+            test.contains(tostring(err), "Context ID is required")
 
             -- Delete non-existent context
             result, err = context_repo.delete(uuid.v7())
             expect(result).to_be_nil()
-            expect(err:match("Context not found")).not_to_be_nil()
+            test.contains(tostring(err), "Context not found")
         end)
 
         it("should only delete the target context without affecting others", function()
@@ -229,7 +231,7 @@ local function define_tests()
             -- Verify the deleted context no longer exists
             local deleted_context, err = context_repo.get(test_ids.id2)
             expect(deleted_context).to_be_nil()
-            expect(err:match("Context not found")).not_to_be_nil()
+            test.contains(tostring(err), "Context not found")
 
             -- Verify the other contexts still exist
             local context1, err = context_repo.get(test_ids.id1)

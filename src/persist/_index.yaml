@@ -7,12 +7,10 @@ entries:
     kind: library.lua
     meta:
       comment: Session writer for secure write operations on sessions, messages, artifacts, and contexts
-      description: Comprehensive writer API with security enforcement for all session write operations including session management, message handling, artifact creation, and context management
     source: file://writer.lua
     modules:
       - uuid
       - json
-      - time
       - security
     imports:
       session_repo: wippy.session.persist:session_repo
@@ -26,7 +24,6 @@ entries:
     kind: library.lua
     meta:
       comment: Artifact repository for managing session artifacts
-      description: User sessions and conversation management system
     source: file://artifact_repo.lua
     modules:
       - sql
@@ -40,16 +37,9 @@ entries:
   - name: artifact_repo_test
     kind: function.lua
     meta:
-      name: Artifact Repository Test
       type: test
-      comment: Tests the artifact repository functionality for managing session artifacts
-      group: Chat Session / Persist
-      tags:
-        - session
-        - database
-        - artifact
-        - tests
-      description: User sessions and conversation management system
+      suite: session
+      comment: Tests the artifact repository functionality
     source: file://artifact_repo_test.lua
     modules:
       - sql
@@ -63,14 +53,13 @@ entries:
       session_repo: wippy.session.persist:session_repo
       test: wippy.test:test
       consts: wippy.session:consts
-    method: run_tests
+    method: run
 
   # wippy.session.persist:context_repo
   - name: context_repo
     kind: library.lua
     meta:
       comment: Context repository for managing data and text contexts
-      description: User sessions and conversation management system
     source: file://context_repo.lua
     modules:
       - sql
@@ -82,16 +71,9 @@ entries:
   - name: context_repo_test
     kind: function.lua
     meta:
-      name: Context Repository Test
       type: test
-      comment: Tests the context repository functionality for managing data contexts
-      group: Chat Session / Persist
-      tags:
-        - session
-        - database
-        - context
-        - tests
-      description: User sessions and conversation management system
+      suite: session
+      comment: Tests the context repository functionality
     source: file://context_repo_test.lua
     modules:
       - sql
@@ -102,14 +84,13 @@ entries:
       context_repo: wippy.session.persist:context_repo
       test: wippy.test:test
       consts: wippy.session:consts
-    method: run_tests
+    method: run
 
   # wippy.session.persist:message_repo
   - name: message_repo
     kind: library.lua
     meta:
       comment: Message repository for managing session messages
-      description: User sessions and conversation management system
     source: file://message_repo.lua
     modules:
       - sql
@@ -122,16 +103,9 @@ entries:
   - name: message_repo_test
     kind: function.lua
     meta:
-      name: Message Repository Test
       type: test
-      comment: Tests the message repository functionality for managing session messages
-      group: Chat Session / Persist
-      tags:
-        - session
-        - database
-        - message
-        - tests
-      description: User sessions and conversation management system
+      suite: session
+      comment: Tests the message repository functionality
     source: file://message_repo_test.lua
     modules:
       - sql
@@ -145,14 +119,13 @@ entries:
       session_repo: wippy.session.persist:session_repo
       test: wippy.test:test
       consts: wippy.session:consts
-    method: run_tests
+    method: run
 
   # wippy.session.persist:session_contexts_repo
   - name: session_contexts_repo
     kind: library.lua
     meta:
       comment: Session contexts repository for managing additional session data
-      description: User sessions and conversation management system
     source: file://session_contexts_repo.lua
     modules:
       - sql
@@ -165,16 +138,9 @@ entries:
   - name: session_contexts_repo_test
     kind: function.lua
     meta:
-      name: Contexts Repository Test
       type: test
-      comment: Tests the session contexts repository functionality for managing additional session data
-      group: Chat Session / Persist
-      tags:
-        - session
-        - database
-        - context
-        - tests
-      description: User sessions and conversation management system
+      suite: session
+      comment: Tests the session contexts repository functionality
     source: file://session_contexts_repo_test.lua
     modules:
       - sql
@@ -187,14 +153,13 @@ entries:
       session_repo: wippy.session.persist:session_repo
       test: wippy.test:test
       consts: wippy.session:consts
-    method: run_tests
+    method: run
 
   # wippy.session.persist:session_repo
   - name: session_repo
     kind: library.lua
     meta:
       comment: Session repository for managing user sessions
-      description: User sessions and conversation management system
     source: file://session_repo.lua
     modules:
       - sql
@@ -207,17 +172,9 @@ entries:
   - name: session_repo_test
     kind: function.lua
     meta:
-      name: Session Repository Test
       type: test
-      comment: Tests the session repository functionality for managing user sessions
-      group: Chat Session / Persist
-      tags:
-        - session
-        - database
-        - session
-        - tests
-        - security
-      description: User sessions and conversation management system
+      suite: session
+      comment: Tests the session repository functionality
     source: file://session_repo_test.lua
     modules:
       - sql
@@ -229,20 +186,19 @@ entries:
       session_repo: wippy.session.persist:session_repo
       test: wippy.test:test
       consts: wippy.session:consts
-    method: run_tests
-
+    method: run
 
   # wippy.session.persist:reader
   - name: reader
     kind: library.lua
     meta:
-      comment: Main session library with query builders for messages, artifacts, and contexts
-      description: Provides SessionReader with fluent query interface for accessing session data including messages, artifacts, and contexts with security enforcement
+      comment: Session reader with fluent query interface for messages, artifacts, and contexts
     source: file://reader.lua
     modules:
       - security
       - json
     imports:
+      consts: wippy.session:consts
       session_repo: wippy.session.persist:session_repo
       message_repo: wippy.session.persist:message_repo
       artifact_repo: wippy.session.persist:artifact_repo

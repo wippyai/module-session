@@ -1,6 +1,21 @@
 local env = require("env")
 local time = require("time")
 
+type SessionConfig = {
+    database_resource: string?,
+    token_checkpoint_threshold: number?,
+    max_message_limit: number?,
+    checkpoint_function_id: string?,
+    title_function_id: string?,
+    default_host: string?,
+    session_security_scope: string?,
+    gc_interval: string?,
+    delegation_func_id: string?,
+    encryption_key: string?,
+    enable_agent_cache: boolean?,
+    delegation_description_suffix: string?,
+}
+
 local consts = {
     -- Environment variable IDs
     ENV_IDS = {

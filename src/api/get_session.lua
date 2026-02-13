@@ -2,7 +2,14 @@ local http = require("http")
 local security = require("security")
 local session_repo = require("session_repo")
 local message_repo = require("message_repo")
-local json = require("json")
+
+type GetSessionResponse = {
+    success: boolean,
+    session: any?,
+    latest_message: any?,
+    message_count: number?,
+    error: string?,
+}
 
 local function handler()
     local res = http.response()

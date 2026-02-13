@@ -138,7 +138,7 @@ local function handler()
         -- Parse the JSON parameters
         local params = {}
         if content_json and content_json ~= "" then
-            local decoded, json_err = json.decode(content_json)
+            local decoded, json_err = json.decode(content_json :: string)
             if json_err then
                 res:set_status(http.STATUS.INTERNAL_ERROR)
                 res:set_content_type(http.CONTENT.JSON)
@@ -174,7 +174,7 @@ local function handler()
         -- Set content type and return the rendered content
         res:set_content_type(artifact.meta.content_type or "text/html")
         res:set_status(http.STATUS.OK)
-        res:write(rendered_content)
+        res:write(rendered_content :: string)
         return
     end
 
@@ -199,9 +199,9 @@ local function handler()
     end
 
     -- Set content type and return the content
-    res:set_content_type(content_type)
+    res:set_content_type(content_type :: string)
     res:set_status(http.STATUS.OK)
-    res:write(content)
+    res:write(content :: string)
 end
 
 return {

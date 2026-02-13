@@ -1,5 +1,20 @@
 local security = require("security")
 local json = require("json")
+local consts = require("consts")
+
+type SessionState = {
+    session_id: string,
+    user_id: string,
+    status: string?,
+    title: string,
+    kind: string,
+    meta: {[string]: any},
+    config: {[string]: any},
+    public_meta: {[string]: any},
+    start_date: string,
+    last_message_date: string,
+    primary_context_id: string,
+}
 
 local session = {
     _session_repo = require("session_repo"),
@@ -10,17 +25,41 @@ local session = {
 }
 
 -- Query builders
-local message_query = {}
+local message_query = {
+    _session_id = nil :: string?,
+    _reader = nil :: any,
+    _type_filter = nil :: string?,
+    _limit = nil :: number?,
+    _offset = nil :: number?,
+    _after_message_id = nil :: string?,
+    _error = nil :: string?,
+}
 message_query.__index = message_query
 
-local artifact_query = {}
+local artifact_query = {
+    _session_id = nil :: string?,
+    _kind_filter = nil :: string?,
+    _limit = nil :: number?,
+    _offset = nil :: number?,
+    _error = nil :: string?,
+}
 artifact_query.__index = artifact_query
 
-local context_query = {}
+local context_query = {
+    _session_id = nil :: string?,
+    _type_filter = nil :: string?,
+    _error = nil :: string?,
+}
 context_query.__index = context_query
 
 -- Session reader
-local session_reader = {}
+local session_reader = {
+    session_id = nil :: string?,
+    user_id = nil :: string?,
+    actor = nil :: any,
+    _session_data = nil :: any,
+    _primary_context_cache = nil :: any,
+}
 session_reader.__index = session_reader
 
 function session.open(session_id)
@@ -216,7 +255,7 @@ function message_query:from_checkpoint()
     end
 
     -- Load the current checkpoint ID from session context
-    local checkpoint_id = self._reader:get_context("current_checkpoint_id") -- todo: move to consts
+    local checkpoint_id = self._reader:get_context(consts.CONTEXT_KEYS.CURRENT_CHECKPOINT_ID)
 
     if checkpoint_id then
         self._after_message_id = checkpoint_id
@@ -424,11 +463,19 @@ function context_query:count()
         return nil, self._error
     end
 
-    local count, err = session._session_contexts_repo.count_by_session(self._session_id)
-    if err then
-        return nil, "Failed to count contexts: " .. err
+    if self._type_filter then
+        local count, err = session._session_contexts_repo.count_by_type(self._session_id, self._type_filter)
+        if err then
+            return nil, "Failed to count contexts: " .. err
+        end
+        return count, nil
+    else
+        local count, err = session._session_contexts_repo.count_by_session(self._session_id)
+        if err then
+            return nil, "Failed to count contexts: " .. err
+        end
+        return count, nil
     end
-    return count, nil
 end
 
 return session

@@ -1,9 +1,14 @@
-local json = require("json")
-local uuid = require("uuid")
 local funcs = require("funcs")
 local consts = require("consts")
 local tool_caller = require("tool_caller")
 local time = require("time")
+
+type BackgroundTriggerResult = {
+    skipped: boolean?,
+    checkpoint_triggered: boolean?,
+    title_triggered: boolean?,
+    next_ops: {any}?,
+}
 
 local session_handlers = {}
 
@@ -164,7 +169,7 @@ function session_handlers.generate_title(ctx, op)
         session_context = {}
     end
 
-    local result, title_err = funcs.new():with_context(session_context):call(ctx.config.title_function_id, {
+    local result, title_err = funcs.new():with_context(session_context):call(ctx.config.title_function_id :: string, {
         session_id = ctx.session_id
     })
 
@@ -206,7 +211,7 @@ function session_handlers.create_checkpoint(ctx, op)
         session_context = {}
     end
 
-    local result, func_err = funcs.new():with_context(session_context):call(ctx.config.checkpoint_function_id, {
+    local result, func_err = funcs.new():with_context(session_context):call(ctx.config.checkpoint_function_id :: string, {
         session_id = ctx.session_id
     })
 
@@ -249,7 +254,7 @@ function session_handlers.create_checkpoint(ctx, op)
 
     local meta_success, meta_err = ctx.writer:update_meta({ meta = current_meta })
     if not meta_success then
-    else
+        return nil, "Failed to update checkpoint meta: " .. (meta_err or "unknown error")
     end
 
     local success1, err1 = ctx.writer:set_context(consts.CONTEXT_KEYS.CURRENT_CHECKPOINT_ID, op.checkpoint_id)
@@ -257,7 +262,7 @@ function session_handlers.create_checkpoint(ctx, op)
         return nil, err1
     end
 
-    local deleted_result, del_err = ctx.writer:delete_session_contexts_by_type(consts.CONTEXT_TYPES.CONVERSATION_SUMMARY)
+    ctx.writer:delete_session_contexts_by_type(consts.CONTEXT_TYPES.CONVERSATION_SUMMARY)
 
     local summary_id, ctx_err = ctx.writer:add_session_context(consts.CONTEXT_TYPES.CONVERSATION_SUMMARY, result.summary)
     if ctx_err then
@@ -322,7 +327,7 @@ function session_handlers.agent_change(ctx, op)
         to_model = new_model
     })
 
-    -- let's agent know and reset cache behaviours
+    -- Notify agent and reset cache
     ctx.writer:add_message(consts.MSG_TYPE.DEVELOPER, switch_message)
 
     ctx.upstream:update_session({
@@ -360,7 +365,7 @@ function session_handlers.model_change(ctx, op)
     ctx.reader:reset()
 
     if ctx.config.agent_id then
-        local switch_success, switch_err = ctx.agent_ctx:switch_to_model(op.model)
+        ctx.agent_ctx:switch_to_model(op.model)
     end
 
     local change_message = string.format("Model changed to: %s", op.model)
@@ -370,7 +375,7 @@ function session_handlers.model_change(ctx, op)
         to_model = op.model
     })
 
-    -- let's agent know and resest cache behaviours
+    -- Notify agent and reset cache
     ctx.writer:add_message(consts.MSG_TYPE.DEVELOPER, change_message)
 
     ctx.upstream:update_session({

@@ -1,0 +1,81 @@
+version: "1.0"
+namespace: app
+
+entries:
+  - name: db
+    kind: db.sql.sqlite
+    meta:
+      comment: Test SQLite database for session tests
+    file: ":memory:"
+
+  - name: env_storage
+    kind: env.storage.os
+    meta:
+      type: envstorage
+
+  - name: processes
+    kind: process.host
+    meta:
+      comment: Process host for bootloader and services
+    host:
+      workers: 2
+      max_processes: 10
+    lifecycle:
+      auto_start: true
+
+  - name: gateway
+    kind: http.service
+    meta:
+      comment: Test HTTP server
+    addr: :19087
+    lifecycle:
+      auto_start: false
+
+  - name: api.public
+    kind: http.router
+    meta:
+      comment: Test public API router
+      server: gateway
+    prefix: /api/public
+
+  - name: dep.wippy.session
+    kind: ns.dependency
+    meta:
+      description: Session module configuration for testing
+    component: "wippy/session"
+    parameters:
+      - name: database_resource
+        value: app:db
+      - name: api_router
+        value: app:api.public
+
+  - name: dep.wippy.llm
+    kind: ns.dependency
+    meta:
+      description: LLM module configuration for testing
+    component: "wippy/llm"
+    parameters:
+      - name: process_host
+        value: app:processes
+      - name: env_storage
+        value: app:env_storage
+
+  - name: dep.wippy.bootloader
+    kind: ns.dependency
+    meta:
+      description: Bootloader configuration for testing
+    component: "wippy/bootloader"
+    parameters:
+      - name: application_host
+        value: app:processes
+      - name: env_storage
+        value: app:env_storage
+
+  - name: dep.wippy.views
+    kind: ns.dependency
+    meta:
+      description: Views module for rendering
+    component: "wippy/views"
+    parameters:
+      - name: api_router
+        value: app:api.public

@@ -4,6 +4,17 @@ local consts = require("consts")
 local prompt_builder = require("prompt_builder")
 local tool_caller = require("tool_caller")
 
+type SessionContext = {
+    session_id: string,
+    user_id: string,
+    reader: any,
+    writer: any,
+    upstream: any,
+    config: {[string]: any},
+    agent_ctx: any,
+    queue_empty_callback: any?,
+}
+
 local message_handlers = {}
 
 function message_handlers.handle_message(ctx, op)
@@ -146,7 +157,7 @@ function message_handlers.agent_step(ctx, op)
 
     if result.memory_prompt then
         local memory_metadata = {}
-        if result.memory_prompt.meta and result.memory_prompt.metadata and result.memory_prompt.metadata.memory_ids then
+        if result.memory_prompt.metadata and result.memory_prompt.metadata.memory_ids then
             memory_metadata.memory_ids = result.memory_prompt.metadata.memory_ids
         end
         ctx.writer:add_message(consts.MSG_TYPE.DEVELOPER, result.memory_prompt.content, memory_metadata)

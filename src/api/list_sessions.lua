@@ -2,6 +2,13 @@ local http = require("http")
 local security = require("security")
 local session_repo = require("session_repo")
 
+type ListSessionsResponse = {
+    success: boolean,
+    count: number?,
+    sessions: {any}?,
+    error: string?,
+}
+
 local function handler()
     local res = http.response()
     local req = http.request()

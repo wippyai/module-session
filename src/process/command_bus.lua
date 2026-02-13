@@ -1,5 +1,28 @@
-local command_bus = {}
+local command_bus = {
+    context = nil :: any,
+    ops_channel = nil :: any,
+    stop_signal = nil :: any,
+    stopping = false,
+    finishing = false,
+    intercepted = false,
+    intercept_handler = nil :: ((any, any) -> (any, string?))?,
+    handlers = {} :: {[string]: (any, any) -> (any, string?)},
+    pending_ops = 0 :: number,
+}
 command_bus.__index = command_bus
+
+type Operation = {
+    type: string,
+    internal: boolean?,
+    request_id: string?,
+}
+
+type OperationResult = {
+    completed: boolean?,
+    next_ops: {Operation}?,
+    error_handled: boolean?,
+    error_message: string?,
+}
 
 function command_bus.new(context)
     local self = setmetatable({}, command_bus)
@@ -14,7 +37,7 @@ function command_bus.new(context)
     self.intercepted = false
     self.intercept_handler = nil
 
-    self.handlers = {}
+    self.handlers = {} :: {[string]: (any, any) -> (any, string?)}
     self.pending_ops = 0
 
     return self

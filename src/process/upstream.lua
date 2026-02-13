@@ -1,5 +1,10 @@
 local consts = require("consts")
 
+type UpstreamPayload = {
+    type: string?,
+    session_id: string?,
+}
+
 local session_upstream = {}
 session_upstream.__index = session_upstream
 
@@ -127,7 +132,7 @@ end
 function session_upstream:_send_message(topic, message)
     -- Send to parent process (which can relay to all connections)
     if self.parent_pid then
-        process.send(self.parent_pid, topic, message)
+        process.send(self.parent_pid :: string, topic, message)
     end
 end
 

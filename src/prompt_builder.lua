@@ -1,6 +1,12 @@
 local json = require("json")
 local consts = require("consts")
 
+type BuildOptions = {
+    include_contexts: boolean?,
+    include_files: boolean?,
+    cache_markers: boolean?,
+}
+
 local prompt_builder = {
     _prompt = require("prompt"),
     _upload_repo = require("upload_repo")
@@ -36,7 +42,7 @@ function prompt_builder.build(messages, contexts, session_meta, options)
         if msg.type == consts.MSG_TYPE.SYSTEM then
             -- for internal use only, use developer role for ongoing system messages
         elseif msg.type == consts.MSG_TYPE.USER then
-            builder:add_user(msg.data)
+            builder:add_user(msg.data :: string)
 
             if include_files and metadata.file_uuids and #metadata.file_uuids > 0 then
                 local file_info = {}
@@ -69,9 +75,9 @@ function prompt_builder.build(messages, contexts, session_meta, options)
             end
         elseif msg.type == consts.MSG_TYPE.ASSISTANT then
             -- Always use add_assistant and let prompt library handle thinking blocks internally
-            builder:add_assistant(msg.data, metadata)
+            builder:add_assistant(msg.data :: string, metadata)
         elseif msg.type == consts.MSG_TYPE.DEVELOPER then
-            builder:add_developer(msg.data, metadata)
+            builder:add_developer(msg.data :: string, metadata)
         elseif
             msg.type == consts.MSG_TYPE.FUNCTION
             or msg.type == consts.MSG_TYPE.PRIVATE_FUNCTION
@@ -87,10 +93,10 @@ function prompt_builder.build(messages, contexts, session_meta, options)
                 end
 
                 local llm_call_id = metadata.call_id or msg.message_id
-                builder:add_function_call(metadata.function_name, args, llm_call_id)
+                builder:add_function_call(metadata.function_name, args :: string, llm_call_id :: string)
 
                 if metadata.status == consts.FUNC_STATUS.PENDING then
-                    builder:add_function_result(metadata.function_name, "incomplete", llm_call_id)
+                    builder:add_function_result(metadata.function_name, "incomplete", llm_call_id :: string)
                 elseif metadata.status == consts.FUNC_STATUS.SUCCESS or
                     metadata.status == consts.FUNC_STATUS.ERROR then
                     local result_content = metadata.result
@@ -101,7 +107,7 @@ function prompt_builder.build(messages, contexts, session_meta, options)
                     else
                         result_content = tostring(result_content)
                     end
-                    builder:add_function_result(metadata.function_name, result_content, llm_call_id)
+                    builder:add_function_result(metadata.function_name, result_content, llm_call_id :: string)
                 end
             end
         elseif msg.type == consts.MSG_TYPE.ARTIFACT then

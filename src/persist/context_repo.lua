@@ -2,7 +2,12 @@ local sql = require("sql")
 local time = require("time")
 local consts = require("consts")
 
--- Constants
+type Context = {
+    context_id: string,
+    type: string,
+    data: string,
+}
+
 local context_repo = {}
 
 -- Get a database connection
