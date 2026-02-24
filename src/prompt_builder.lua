@@ -87,7 +87,11 @@ function prompt_builder.build(messages, contexts, session_meta, options)
                 end
 
                 local llm_call_id = metadata.call_id or msg.message_id
-                builder:add_function_call(metadata.function_name, args, llm_call_id)
+                local opts = nil
+                if metadata.provider_metadata then
+                    opts = { provider_metadata = metadata.provider_metadata }
+                end
+                builder:add_function_call(metadata.function_name, args, llm_call_id, opts)
 
                 if metadata.status == consts.FUNC_STATUS.PENDING then
                     builder:add_function_result(metadata.function_name, "incomplete", llm_call_id)

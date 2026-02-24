@@ -178,6 +178,18 @@ function message_repo.update_metadata(message_id, metadata)
         return nil, "Metadata is required"
     end
 
+    local message, err = message_repo.get(message_id)
+    if not message or err then
+        return nil, "Message not found"
+    end
+
+    if type(message.metadata) == "table" and type(metadata) == "table" then
+        for k, v in pairs(metadata) do
+            message.metadata[k] = v
+        end
+        metadata = message.metadata
+    end
+
     -- Convert metadata to JSON if it's a table
     local metadata_json = nil
     if type(metadata) == "table" then
