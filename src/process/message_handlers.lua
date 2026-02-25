@@ -219,12 +219,16 @@ function message_handlers.process_tools(ctx, op)
                 send_upstream = false
             end
 
-            local message_id, err = ctx.writer:add_message(message_type, json.encode(tool_call.args), {
+            local msg_metadata = {
                 call_id = call_id,
                 function_name = tool_call.name,
                 registry_id = tool_call.registry_id,
                 status = consts.FUNC_STATUS.PENDING
-            })
+            }
+            if tool_call.provider_metadata then
+                msg_metadata.provider_metadata = tool_call.provider_metadata
+            end
+            local message_id, err = ctx.writer:add_message(message_type, json.encode(tool_call.args), msg_metadata)
 
             if not err then
                 tool_call.message_id = message_id
