@@ -3,7 +3,14 @@ local json = require("json")
 local time = require("time")
 local consts = require("consts")
 
--- Constants
+type SessionContext = {
+    id: string,
+    session_id: string,
+    type: string,
+    text: string,
+    time: string,
+}
+
 local session_contexts_repo = {}
 
 -- Get a database connection
@@ -350,6 +357,40 @@ function session_contexts_repo.count_by_session(session_id)
 
     if err then
         return nil, "Failed to count session contexts: " .. err
+    end
+
+    return result[1].count
+end
+
+-- Count session contexts by type for a session
+function session_contexts_repo.count_by_type(session_id, context_type)
+    if not session_id or session_id == "" then
+        return nil, "Session ID is required"
+    end
+
+    if not context_type or context_type == "" then
+        return nil, "Context type is required"
+    end
+
+    local db, err = get_db()
+    if err then
+        return nil, err
+    end
+
+    local query = sql.builder.select("COUNT(*) as count")
+        :from("session_contexts")
+        :where(sql.builder.and_({
+            sql.builder.expr("session_id = ?", session_id),
+            sql.builder.expr("type = ?", context_type)
+        }))
+
+    local executor = query:run_with(db)
+    local result, err = executor:query()
+
+    db:release()
+
+    if err then
+        return nil, "Failed to count session contexts by type: " .. err
     end
 
     return result[1].count

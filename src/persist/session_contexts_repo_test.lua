@@ -42,9 +42,7 @@ local function define_tests()
                 test_data.user_id,
                 test_data.context_id,
                 "Test Session",
-                "test",
-                "test-model",
-                "test-agent"
+                "test"
             )
 
             if err then
@@ -139,6 +137,7 @@ local function define_tests()
             expect(#contexts).to_equal(2)
 
             -- Contexts should be ordered by ID (which is UUID v7, so time-ordered)
+            assert(contexts)
             expect(contexts[1].id).to_equal(test_data.context1_id)
             expect(contexts[2].id).to_equal(test_data.context2_id)
         end)
@@ -148,12 +147,14 @@ local function define_tests()
 
             expect(err).to_be_nil()
             expect(contexts).not_to_be_nil()
+            assert(contexts)
             expect(#contexts).to_equal(1)
             expect(contexts[1].type).to_equal("note")
 
             contexts, err = session_contexts_repo.list_by_type(test_data.session_id, "bookmark")
             expect(err).to_be_nil()
             expect(contexts).not_to_be_nil()
+            assert(contexts)
             expect(#contexts).to_equal(1)
             expect(contexts[1].type).to_equal("bookmark")
         end)
@@ -192,7 +193,7 @@ local function define_tests()
             -- Verify the deletion
             local context, err = session_contexts_repo.get(test_data.context1_id)
             expect(context).to_be_nil()
-            expect(err:match("not found")).not_to_be_nil()
+            test.contains(tostring(err), "not found")
 
             -- Count should now be 1
             local count, err = session_contexts_repo.count_by_session(test_data.session_id)
@@ -234,39 +235,39 @@ local function define_tests()
             -- Invalid context creation
             local context, err = session_contexts_repo.create(nil, test_data.session_id, "note", "text")
             expect(context).to_be_nil()
-            expect(err:match("ID is required")).not_to_be_nil()
+            test.contains(tostring(err), "ID is required")
 
             context, err = session_contexts_repo.create(uuid.v7(), "", "note", "text")
             expect(context).to_be_nil()
-            expect(err:match("Session ID is required")).not_to_be_nil()
+            test.contains(tostring(err), "Session ID is required")
 
             context, err = session_contexts_repo.create(uuid.v7(), test_data.session_id, "", "text")
             expect(context).to_be_nil()
-            expect(err:match("Context type is required")).not_to_be_nil()
+            test.contains(tostring(err), "Context type is required")
 
             context, err = session_contexts_repo.create(uuid.v7(), test_data.session_id, "note", nil)
             expect(context).to_be_nil()
-            expect(err:match("Text is required")).not_to_be_nil()
+            test.contains(tostring(err), "Text is required")
 
             -- Get with invalid ID
             context, err = session_contexts_repo.get("")
             expect(context).to_be_nil()
-            expect(err:match("ID is required")).not_to_be_nil()
+            test.contains(tostring(err), "ID is required")
 
             -- List with invalid session ID
             local contexts, err = session_contexts_repo.list_by_session("")
             expect(contexts).to_be_nil()
-            expect(err:match("Session ID is required")).not_to_be_nil()
+            test.contains(tostring(err), "Session ID is required")
 
             -- Update with invalid ID
             local result, err = session_contexts_repo.update_text("", "text")
             expect(result).to_be_nil()
-            expect(err:match("ID is required")).not_to_be_nil()
+            test.contains(tostring(err), "ID is required")
 
             -- Delete with invalid ID
             result, err = session_contexts_repo.delete("")
             expect(result).to_be_nil()
-            expect(err:match("ID is required")).not_to_be_nil()
+            test.contains(tostring(err), "ID is required")
         end)
     end)
 end

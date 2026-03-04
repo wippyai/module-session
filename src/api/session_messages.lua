@@ -5,6 +5,19 @@ local message_repo = require("message_repo")
 local time = require("time")
 local json = require("json")
 
+type SessionMessagesResponse = {
+    success: boolean,
+    count: number?,
+    session_id: string?,
+    messages: {any}?,
+    pagination: {
+        has_more: boolean,
+        next_cursor: string?,
+        prev_cursor: string?,
+    }?,
+    error: string?,
+}
+
 local function handler()
     local res = http.response()
     local req = http.request()
@@ -87,7 +100,7 @@ local function handler()
     for i, message in ipairs(messages) do
         -- If metadata exists but isn't directly accessible
         if message.metadata_json and message.metadata_json ~= "" then
-            local decoded, err = json.decode(message.metadata_json)
+            local decoded, err = json.decode(message.metadata_json :: string)
             if not err then
                 message.metadata = decoded
             else
@@ -103,7 +116,7 @@ local function handler()
         end
 
         if message.date and type(message.date) == "number" then
-            message.date = time.unix(message.date, 0):format_rfc3339()
+            message.date = time.unix(message.date :: number, 0):format_rfc3339()
         end
     end
 

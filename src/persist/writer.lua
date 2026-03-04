@@ -2,12 +2,21 @@ local uuid = require("uuid")
 local json = require("json")
 local security = require("security")
 
+type WriteResult = {
+    success: boolean,
+    error: string?,
+}
+
 local session_writer = {
     _session_repo = require("session_repo"),
     _message_repo = require("message_repo"),
     _artifact_repo = require("artifact_repo"),
     _context_repo = require("context_repo"),
-    _session_contexts_repo = require("session_contexts_repo")
+    _session_contexts_repo = require("session_contexts_repo"),
+    session_id = nil :: string?,
+    user_id = nil :: string?,
+    actor = nil :: any,
+    _session_data = nil :: any,
 }
 session_writer.__index = session_writer
 
@@ -72,13 +81,16 @@ function session_writer:update_title(title)
 end
 
 function session_writer:update_status(status, error_message)
-    local updates = { status = status }
+    local updates = { status = status, last_message_date = os.time() }
 
     if error_message then
-        updates.error = error_message
+        local session, err = session_writer._session_repo.get(self.session_id, self.user_id)
+        if session then
+            local current_meta = session.meta or {}
+            current_meta.error = error_message
+            updates.meta = current_meta
+        end
     end
-
-    updates.last_message_date = os.time()
 
     return self:update_meta(updates)
 end
@@ -99,7 +111,13 @@ function session_writer:add_message(msg_type, content, metadata)
     local message_id
     if metadata.message_id then
         message_id = metadata.message_id
-        metadata.message_id = nil
+        local clean = {}
+        for k, v in pairs(metadata) do
+            if k ~= "message_id" then
+                clean[k] = v
+            end
+        end
+        metadata = clean
     else
         local err
         message_id, err = uuid.v7()

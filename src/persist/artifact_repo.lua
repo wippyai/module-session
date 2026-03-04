@@ -4,6 +4,25 @@ local time = require("time")
 local consts = require("consts")
 local security = require("security")
 
+type Artifact = {
+    artifact_id: string,
+    session_id: string?,
+    user_id: string,
+    kind: string,
+    title: string,
+    content: string?,
+    meta: {[string]: any}?,
+    created_at: string,
+    updated_at: string,
+}
+
+type ArtifactUpdates = {
+    kind: string?,
+    title: string?,
+    content: string?,
+    meta: {[string]: any}?,
+}
+
 local artifact_repo = {}
 
 -- Get a database connection
@@ -146,7 +165,7 @@ function artifact_repo.get(artifact_id)
 
     -- Parse meta JSON if it exists
     if artifact.meta and artifact.meta ~= "" then
-        local decoded, err = json.decode(artifact.meta)
+        local decoded, err = json.decode(artifact.meta :: string)
         if not err then
             artifact.meta = decoded
         end
@@ -189,13 +208,14 @@ function artifact_repo.update(artifact_id, updates)
     end
 
     -- Convert meta to JSON if it's a table
-    if updates.meta and type(updates.meta) == "table" then
-        local encoded, err = json.encode(updates.meta)
+    local meta_value = updates.meta
+    if meta_value and type(meta_value) == "table" then
+        local encoded, err = json.encode(meta_value)
         if err then
             db:release()
             return nil, "Failed to encode meta: " .. err
         end
-        updates.meta = encoded
+        meta_value = encoded
     end
 
     -- Build the update query
@@ -219,8 +239,8 @@ function artifact_repo.update(artifact_id, updates)
         updated = true
     end
 
-    if updates.meta ~= nil then
-        update_query = update_query:set("meta", updates.meta)
+    if meta_value ~= nil then
+        update_query = update_query:set("meta", meta_value)
         updated = true
     end
 
@@ -284,7 +304,7 @@ function artifact_repo.list_by_session(session_id, limit, offset)
     -- Parse meta JSON if it exists
     for i, artifact in ipairs(artifacts) do
         if artifact.meta and artifact.meta ~= "" then
-            local decoded, err = json.decode(artifact.meta)
+            local decoded, err = json.decode(artifact.meta :: string)
             if not err then
                 artifact.meta = decoded
             end
@@ -339,7 +359,7 @@ function artifact_repo.list_by_kind(session_id, kind, limit, offset)
     -- Parse meta JSON if it exists
     for i, artifact in ipairs(artifacts) do
         if artifact.meta and artifact.meta ~= "" then
-            local decoded, err = json.decode(artifact.meta)
+            local decoded, err = json.decode(artifact.meta :: string)
             if not err then
                 artifact.meta = decoded
             end

@@ -3,6 +3,25 @@ local base64 = require("base64")
 local json = require("json")
 local consts = require("consts")
 
+type StartTokenParams = {
+    agent: string,
+    model: string?,
+    kind: string?,
+    start_func: string?,
+    start_params: {[string]: any}?,
+    context: {[string]: any}?,
+}
+
+type StartTokenPayload = {
+    agent: string,
+    model: string?,
+    kind: string,
+    issued_at: number,
+    start_func: string?,
+    start_params: {[string]: any}?,
+    context: {[string]: any}?,
+}
+
 -- Convert hex string to bytes
 local function hex_decode(hex_str)
     if not hex_str or #hex_str % 2 ~= 0 then
@@ -73,7 +92,7 @@ local function pack_start_token(params)
     local encryption_key = get_encryption_key()
 
     -- Encrypt the payload using AES-GCM from the crypto module
-    local encrypted, err = crypto.encrypt.aes(json_data, encryption_key)
+    local encrypted, err = crypto.encrypt.aes(json_data, encryption_key :: string)
     if err then
         return nil, "Encryption error: " .. err
     end
@@ -83,7 +102,7 @@ local function pack_start_token(params)
 end
 
 -- Unpack a start token into the original session parameters table
-local function unpack_start_token(token)
+local function unpack_start_token(token: string?)
     if not token then return nil, "No token provided" end
 
     -- Decode base64 first
@@ -96,7 +115,7 @@ local function unpack_start_token(token)
     local encryption_key = get_encryption_key()
 
     -- Decrypt the data
-    local json_data, err = crypto.decrypt.aes(encrypted_data, encryption_key)
+    local json_data, err = crypto.decrypt.aes(encrypted_data, encryption_key :: string)
     if err then
         return nil, "Invalid start token: " .. err
     end

@@ -3,7 +3,30 @@ local json = require("json")
 local time = require("time")
 local consts = require("consts")
 
--- Constants
+type Session = {
+    session_id: string,
+    user_id: string,
+    status: string?,
+    primary_context_id: string,
+    title: string,
+    kind: string,
+    meta: {[string]: any},
+    config: {[string]: any},
+    public_meta: {[string]: any},
+    start_date: string,
+    last_message_date: string,
+}
+
+type SessionUpdates = {
+    title: string?,
+    status: string?,
+    kind: string?,
+    meta: {[string]: any}?,
+    config: {[string]: any}?,
+    public_meta: {[string]: any}?,
+    last_message_date: number?,
+}
+
 local session_repo = {}
 
 -- Get a database connection
@@ -162,7 +185,7 @@ function session_repo.get(session_id, user_id)
 
     -- Parse JSON fields
     if session.meta and session.meta ~= "" then
-        local decoded, err = json.decode(session.meta)
+        local decoded, err = json.decode(session.meta :: string)
         if not err then
             session.meta = decoded
         else
@@ -173,7 +196,7 @@ function session_repo.get(session_id, user_id)
     end
 
     if session.config and session.config ~= "" then
-        local decoded, err = json.decode(session.config)
+        local decoded, err = json.decode(session.config :: string)
         if not err then
             session.config = decoded
         else
@@ -184,7 +207,7 @@ function session_repo.get(session_id, user_id)
     end
 
     if session.public_meta and session.public_meta ~= "" then
-        local decoded, err = json.decode(session.public_meta)
+        local decoded, err = json.decode(session.public_meta :: string)
         if not err then
             session.public_meta = decoded
         else
@@ -235,7 +258,7 @@ function session_repo.list_by_user(user_id, limit, offset)
     -- Parse JSON fields for each session
     for i, session in ipairs(sessions) do
         if session.meta and session.meta ~= "" then
-            local decoded, err = json.decode(session.meta)
+            local decoded, err = json.decode(session.meta :: string)
             if not err then
                 session.meta = decoded
             else
@@ -246,7 +269,7 @@ function session_repo.list_by_user(user_id, limit, offset)
         end
 
         if session.config and session.config ~= "" then
-            local decoded, err = json.decode(session.config)
+            local decoded, err = json.decode(session.config :: string)
             if not err then
                 session.config = decoded
             else
@@ -257,7 +280,7 @@ function session_repo.list_by_user(user_id, limit, offset)
         end
 
         if session.public_meta and session.public_meta ~= "" then
-            local decoded, err = json.decode(session.public_meta)
+            local decoded, err = json.decode(session.public_meta :: string)
             if not err then
                 session.public_meta = decoded
             else

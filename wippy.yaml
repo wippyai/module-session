@@ -1,0 +1,18 @@
+organization: wippy
+module: session
+description: User sessions and conversation management
+license: Apache-2.0
+repository: https://github.com/wippyai/framework
+homepage: https://wippy.ai
+keywords:
+  - session
+  - conversation
+  - messaging
+  - artifacts
+exclude_meta:
+  type:
+    - test
+  scope:
+    - dev
+exclude:
+  - "app:**"

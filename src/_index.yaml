@@ -2,6 +2,44 @@ version: "1.0"
 namespace: wippy.session
 
 entries:
+  - name: definition
+    kind: ns.definition
+    meta:
+      title: Session
+      description: User sessions and conversation management
+
+  # wippy.session:api_router
+  - name: api_router
+    kind: ns.requirement
+    meta:
+      description: Injects API router configuration into endpoints
+      parent: app.deps:dep.wippy.session
+    targets:
+      - entry: wippy.session.api:delete_session
+        path: .meta.router
+      - entry: wippy.session.api:delete_session.endpoint
+        path: .meta.router
+      - entry: wippy.session.api:get_artifact
+        path: .meta.router
+      - entry: wippy.session.api:get_artifact.endpoint
+        path: .meta.router
+      - entry: wippy.session.api:get_artifact_content
+        path: .meta.router
+      - entry: wippy.session.api:get_artifact_content.endpoint
+        path: .meta.router
+      - entry: wippy.session.api:get_session
+        path: .meta.router
+      - entry: wippy.session.api:get_session.endpoint
+        path: .meta.router
+      - entry: wippy.session.api:list_sessions
+        path: .meta.router
+      - entry: wippy.session.api:list_sessions.endpoint
+        path: .meta.router
+      - entry: wippy.session.api:session_messages
+        path: .meta.router
+      - entry: wippy.session.api:session_messages.endpoint
+        path: .meta.router
+
   # Requirements
   - name: database_resource
     kind: ns.requirement
@@ -97,47 +135,44 @@ entries:
     kind: library.lua
     meta:
       comment: System-wide constants and configuration management for session system
-      description: Environment variable handling, status constants, error codes, and configuration defaults
     source: file://consts.lua
     modules:
       - env
       - time
 
   # Dependencies
-  - name: __dependency.wippy.llm
-    kind: "ns.dependency"
-    meta:
-      description: "LLM component"
-    component: "wippy/llm"
-    version: ">=v0.2.0"
+  - name: dep.wippy.llm
+    kind: ns.dependency
+    component: wippy/llm
+    version: ">=v0.4.0"
 
-  - name: __dependency.wippy.migration
-    kind: "ns.dependency"
-    meta:
-      description: "Migration component"
-    component: "wippy/migration"
-    version: ">=v0.0.10"
+  - name: dep.wippy.migration
+    kind: ns.dependency
+    component: wippy/migration
+    version: ">=v0.3.0"
 
-  - name: __dependency.wippy.agent
-    kind: "ns.dependency"
-    meta:
-      description: "Agent component"
-    component: "wippy/agent"
-    version: ">=v0.2.0"
+  - name: dep.wippy.agent
+    kind: ns.dependency
+    component: wippy/agent
+    version: ">=v0.4.0"
 
-  - name: __dependency.wippy.test
-    kind: "ns.dependency"
+  - name: dep.wippy.views
+    kind: ns.dependency
+    component: wippy/views
+    version: ">=v0.4.0"
+
+  - name: dep.wippy.test
+    kind: ns.dependency
     meta:
-      description: "Testing component"
-    component: "wippy/test"
-    version: ">=v0.0.8"
+      scope: dev
+    component: wippy/test
+    version: "*"
 
   # wippy.session:start_tokens
   - name: start_tokens
     kind: library.lua
     meta:
       comment: Library for creating and validating session start tokens
-      description: User sessions and conversation management system
     source: file://start_tokens.lua
     modules:
       - crypto
@@ -150,35 +185,24 @@ entries:
   - name: start_tokens_test
     kind: function.lua
     meta:
-      name: Start Tokens Library Test
       type: test
+      suite: session
       comment: Tests the start_tokens library for creating and validating session start tokens
-      group: Chat Session
-      tags:
-        - session
-        - security
-        - token
-        - tests
-      description: User sessions and conversation management system
     source: file://start_tokens_test.lua
     modules:
-      - crypto
       - base64
-      - json
     imports:
       start_tokens: wippy.session:start_tokens
       test: wippy.test:test
-    method: run_tests
+    method: run
 
   # wippy.session:prompt_builder
   - name: prompt_builder
     kind: library.lua
     meta:
       comment: Prompt construction and formatting library for session messages
-      description: Builds prompts from message history, context, and templates
     source: file://prompt_builder.lua
     modules:
-      - text
       - json
     imports:
       consts: wippy.session:consts

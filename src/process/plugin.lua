@@ -7,6 +7,20 @@ local context_repo = require("context_repo")
 local start_tokens = require("start_tokens")
 local consts = require("consts")
 
+type PluginArgs = {
+    user_id: string,
+    user_metadata: {[string]: any}?,
+    user_hub_pid: any?,
+}
+
+type ActiveSession = {
+    pid: any,
+    created_at: any,
+    last_activity: any,
+    terminating: boolean,
+    terminate_reason: string?,
+}
+
 local function run(args)
     if not args or not args.user_id then
         return nil, "Missing required arguments: user_id"
@@ -32,7 +46,7 @@ local function run(args)
 
     local function send_error(conn_pid, error_code, message, request_id)
         if conn_pid then
-            process.send(conn_pid, consts.TOPICS.ERROR, {
+            process.send(conn_pid :: string, consts.TOPICS.ERROR, {
                 error = error_code,
                 message = message,
                 request_id = request_id
@@ -72,7 +86,7 @@ local function run(args)
             reason = reason
         })
 
-        process.send(session_info.pid, consts.TOPICS.FINISH_AND_EXIT, {})
+        process.send(session_info.pid :: string, consts.TOPICS.FINISH_AND_EXIT, {})
     end
 
     local function get_oldest_session()
@@ -80,10 +94,12 @@ local function run(args)
         local oldest_time = nil
 
         for session_id, session_info in pairs(state.active_sessions) do
-            local last_activity = session_info.last_activity or session_info.created_at
-            if not oldest_time or last_activity:before(oldest_time) then
-                oldest_time = last_activity
-                oldest_id = session_id
+            if not session_info.terminating then
+                local last_activity = session_info.last_activity or session_info.created_at
+                if not oldest_time or last_activity:before(oldest_time) then
+                    oldest_time = last_activity
+                    oldest_id = session_id
+                end
             end
         end
 
@@ -91,18 +107,20 @@ local function run(args)
     end
 
     local function enforce_session_limit()
-        while state.session_count >= consts.LIMITS.MAX_SESSIONS_PER_USER do
+        local active_count = 0
+        for _, info in pairs(state.active_sessions) do
+            if not info.terminating then
+                active_count = active_count + 1
+            end
+        end
+
+        while active_count >= consts.LIMITS.MAX_SESSIONS_PER_USER do
             local oldest_id = get_oldest_session()
-            if oldest_id then
-                local session_info = state.active_sessions[oldest_id]
-                if session_info then
-                    graceful_terminate_session(oldest_id, session_info, "limit_exceeded")
-                    state.active_sessions[oldest_id] = nil
-                    state.session_count = state.session_count - 1
-                end
-            else
+            if not oldest_id then
                 break
             end
+            graceful_terminate_session(oldest_id, state.active_sessions[oldest_id], "limit_exceeded")
+            active_count = active_count - 1
         end
     end
 
@@ -111,7 +129,7 @@ local function run(args)
             return nil, "Start token is required"
         end
 
-        local token_data, err = start_tokens.unpack(token)
+        local token_data, err = start_tokens.unpack(token :: string)
         if err then
             return nil, "Invalid start token: " .. err
         end
@@ -192,7 +210,7 @@ local function run(args)
 
                 -- Notify hub of status reset if available
                 if state.user_hub_pid then
-                    process.send(state.user_hub_pid, consts.TOPIC_PREFIXES.SESSION .. session_id, {
+                    process.send(state.user_hub_pid :: string, consts.TOPIC_PREFIXES.SESSION .. session_id, {
                         type = consts.UPSTREAM_TYPES.UPDATE,
                         session_id = session_id,
                         status = consts.STATUS.IDLE
@@ -224,7 +242,7 @@ local function run(args)
         if state.active_sessions[session_id] then
             logger:debug("session already exists", { user_id = state.user_id, session_id = session_id })
             if state.user_hub_pid then
-                process.send(state.user_hub_pid, consts.TOPICS.SESSION_OPENED, {
+                process.send(state.user_hub_pid :: string, consts.TOPICS.SESSION_OPENED, {
                     session_id = session_id,
                     active_session_ids = get_active_session_ids(),
                     request_id = payload_data.request_id
@@ -294,7 +312,7 @@ local function run(args)
             user_id = state.user_id,
         }):spawn_linked_monitored(
             consts.PROCESS.SESSION_ID,
-            state.base_config.default_host,
+            state.base_config.default_host :: string,
             session_init
         )
 
@@ -320,7 +338,7 @@ local function run(args)
                 { user_id = state.user_id, session_id = session_id, active_sessions = state.session_count })
 
             if state.user_hub_pid then
-                process.send(state.user_hub_pid, consts.TOPICS.SESSION_OPENED, {
+                process.send(state.user_hub_pid :: string, consts.TOPICS.SESSION_OPENED, {
                     session_id = session_id,
                     active_session_ids = get_active_session_ids(),
                     request_id = payload_data.request_id
@@ -402,7 +420,7 @@ local function run(args)
             update_session_activity(session_id)
 
             if topic_type == consts.HANDLER_TYPES.MESSAGE then
-                process.send(session_info.pid, consts.TOPICS.MESSAGE, {
+                process.send(session_info.pid :: string, consts.TOPICS.MESSAGE, {
                     conn_pid = conn_pid,
                     data = payload_data.data,
                     request_id = request_id
@@ -413,7 +431,7 @@ local function run(args)
                 if request_id then
                     cmd_data.request_id = request_id
                 end
-                process.send(session_info.pid, consts.TOPICS.COMMAND, cmd_data)
+                process.send(session_info.pid :: string, consts.TOPICS.COMMAND, cmd_data)
             end
         else
             -- Session ID provided but not in active sessions - try to recover
@@ -431,7 +449,7 @@ local function run(args)
                 update_session_activity(created_session_id)
 
                 if topic_type == consts.HANDLER_TYPES.MESSAGE then
-                    process.send(recovered_session_info.pid, consts.TOPICS.MESSAGE, {
+                    process.send(recovered_session_info.pid :: string, consts.TOPICS.MESSAGE, {
                         conn_pid = conn_pid,
                         data = payload_data.data,
                         request_id = request_id
@@ -442,7 +460,7 @@ local function run(args)
                     if request_id then
                         cmd_data.request_id = request_id
                     end
-                    process.send(recovered_session_info.pid, consts.TOPICS.COMMAND, cmd_data)
+                    process.send(recovered_session_info.pid :: string, consts.TOPICS.COMMAND, cmd_data)
                 end
             else
                 send_error(conn_pid, consts.ERROR_CODES.SESSION_NOT_FOUND,
@@ -520,7 +538,7 @@ local function run(args)
                 end
             elseif string.sub(topic, 1, string.len(consts.TOPIC_PREFIXES.SESSION)) == consts.TOPIC_PREFIXES.SESSION then
                 if state.user_hub_pid then
-                    process.send(state.user_hub_pid, topic, payload:data())
+                    process.send(state.user_hub_pid :: string, topic, payload:data())
                 end
             end
         elseif result.channel == events then
@@ -564,7 +582,7 @@ local function run(args)
                         if state.user_hub_pid then
                             -- Send session status update first
                             if success then
-                                process.send(state.user_hub_pid, consts.TOPIC_PREFIXES.SESSION .. session_id, {
+                                process.send(state.user_hub_pid :: string, consts.TOPIC_PREFIXES.SESSION .. session_id, {
                                     type = consts.UPSTREAM_TYPES.UPDATE,
                                     session_id = session_id,
                                     status = target_status
@@ -572,7 +590,7 @@ local function run(args)
                             end
 
                             -- Then send session closed notification
-                            process.send(state.user_hub_pid, consts.TOPICS.SESSION_CLOSED, {
+                            process.send(state.user_hub_pid :: string, consts.TOPICS.SESSION_CLOSED, {
                                 session_id = session_id,
                                 reason = err,
                                 active_session_ids = get_active_session_ids()

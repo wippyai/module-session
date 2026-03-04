@@ -1,8 +1,16 @@
-local json = require("json")
 local session = require("session")
 local llm = require("llm")
 local prompt = require("prompt")
-local time = require("time")
+
+type TitleResult = {
+    success: boolean,
+    title: string?,
+    tokens: {
+        prompt_tokens: number,
+        completion_tokens: number,
+        total_tokens: number,
+    }?,
+}
 
 local CONFIG = {
     model = "gpt-4o-mini",
