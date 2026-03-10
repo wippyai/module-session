@@ -208,3 +208,19 @@ entries:
       consts: wippy.session:consts
       prompt: wippy.llm:prompt
       upload_repo: userspace.uploads:upload_repo
+
+  # wippy.session:prompt_builder_test
+  - name: prompt_builder_test
+    kind: function.lua
+    meta:
+      type: test
+      suite: session
+      comment: Tests the prompt builder functionality
+    source: file://prompt_builder_test.lua
+    modules:
+      - json
+    imports:
+      prompt_builder: wippy.session:prompt_builder
+      consts: wippy.session:consts
+      test: wippy.test:test
+    method: run

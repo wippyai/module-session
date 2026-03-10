@@ -90,24 +90,24 @@ local function define_tests()
                 "This is a test note"
             )
 
-            expect(err).to_be_nil()
-            expect(context).not_to_be_nil()
-            expect(context.id).to_equal(test_data.context1_id)
-            expect(context.session_id).to_equal(test_data.session_id)
-            expect(context.type).to_equal("note")
-            expect(context.text).to_equal("This is a test note")
-            expect(context.time).not_to_be_nil()
+            test.is_nil(err)
+            test.not_nil(context)
+            test.eq(context.id, test_data.context1_id)
+            test.eq(context.session_id, test_data.session_id)
+            test.eq(context.type, "note")
+            test.eq(context.text, "This is a test note")
+            test.not_nil(context.time)
         end)
 
         it("should get a session context by ID", function()
             local context, err = session_contexts_repo.get(test_data.context1_id)
 
-            expect(err).to_be_nil()
-            expect(context).not_to_be_nil()
-            expect(context.id).to_equal(test_data.context1_id)
-            expect(context.session_id).to_equal(test_data.session_id)
-            expect(context.type).to_equal("note")
-            expect(context.text).to_equal("This is a test note")
+            test.is_nil(err)
+            test.not_nil(context)
+            test.eq(context.id, test_data.context1_id)
+            test.eq(context.session_id, test_data.session_id)
+            test.eq(context.type, "note")
+            test.eq(context.text, "This is a test note")
         end)
 
         it("should create another session context with custom time", function()
@@ -120,43 +120,43 @@ local function define_tests()
                 custom_time
             )
 
-            expect(err).to_be_nil()
-            expect(context).not_to_be_nil()
-            expect(context.id).to_equal(test_data.context2_id)
-            expect(context.session_id).to_equal(test_data.session_id)
-            expect(context.type).to_equal("bookmark")
-            expect(context.text).to_equal("This is a bookmark")
-            expect(context.time).to_equal(time.unix(custom_time, 0):format(time.RFC3339))
+            test.is_nil(err)
+            test.not_nil(context)
+            test.eq(context.id, test_data.context2_id)
+            test.eq(context.session_id, test_data.session_id)
+            test.eq(context.type, "bookmark")
+            test.eq(context.text, "This is a bookmark")
+            test.eq(context.time, time.unix(custom_time, 0):format(time.RFC3339))
         end)
 
         it("should list session contexts by session ID in ID order", function()
             local contexts, err = session_contexts_repo.list_by_session(test_data.session_id)
 
-            expect(err).to_be_nil()
-            expect(contexts).not_to_be_nil()
-            expect(#contexts).to_equal(2)
+            test.is_nil(err)
+            test.not_nil(contexts)
+            test.eq(#contexts, 2)
 
             -- Contexts should be ordered by ID (which is UUID v7, so time-ordered)
             assert(contexts)
-            expect(contexts[1].id).to_equal(test_data.context1_id)
-            expect(contexts[2].id).to_equal(test_data.context2_id)
+            test.eq(contexts[1].id, test_data.context1_id)
+            test.eq(contexts[2].id, test_data.context2_id)
         end)
 
         it("should list session contexts by type", function()
             local contexts, err = session_contexts_repo.list_by_type(test_data.session_id, "note")
 
-            expect(err).to_be_nil()
-            expect(contexts).not_to_be_nil()
+            test.is_nil(err)
+            test.not_nil(contexts)
             assert(contexts)
-            expect(#contexts).to_equal(1)
-            expect(contexts[1].type).to_equal("note")
+            test.eq(#contexts, 1)
+            test.eq(contexts[1].type, "note")
 
             contexts, err = session_contexts_repo.list_by_type(test_data.session_id, "bookmark")
-            expect(err).to_be_nil()
-            expect(contexts).not_to_be_nil()
+            test.is_nil(err)
+            test.not_nil(contexts)
             assert(contexts)
-            expect(#contexts).to_equal(1)
-            expect(contexts[1].type).to_equal("bookmark")
+            test.eq(#contexts, 1)
+            test.eq(contexts[1].type, "bookmark")
         end)
 
         it("should update session context text", function()
@@ -165,40 +165,40 @@ local function define_tests()
                 "Updated note text"
             )
 
-            expect(err).to_be_nil()
-            expect(result).not_to_be_nil()
-            expect(result.id).to_equal(test_data.context1_id)
-            expect(result.text).to_equal("Updated note text")
-            expect(result.updated).to_be_true()
+            test.is_nil(err)
+            test.not_nil(result)
+            test.eq(result.id, test_data.context1_id)
+            test.eq(result.text, "Updated note text")
+            test.is_true(result.updated)
 
             -- Verify the update
             local context, err = session_contexts_repo.get(test_data.context1_id)
-            expect(context.text).to_equal("Updated note text")
+            test.eq(context.text, "Updated note text")
         end)
 
         it("should count session contexts", function()
             local count, err = session_contexts_repo.count_by_session(test_data.session_id)
 
-            expect(err).to_be_nil()
-            expect(count).to_equal(2)
+            test.is_nil(err)
+            test.eq(count, 2)
         end)
 
         it("should delete a session context", function()
             local result, err = session_contexts_repo.delete(test_data.context1_id)
 
-            expect(err).to_be_nil()
-            expect(result).not_to_be_nil()
-            expect(result.deleted).to_be_true()
+            test.is_nil(err)
+            test.not_nil(result)
+            test.is_true(result.deleted)
 
             -- Verify the deletion
             local context, err = session_contexts_repo.get(test_data.context1_id)
-            expect(context).to_be_nil()
+            test.is_nil(context)
             test.contains(tostring(err), "not found")
 
             -- Count should now be 1
             local count, err = session_contexts_repo.count_by_session(test_data.session_id)
-            expect(err).to_be_nil()
-            expect(count).to_equal(1)
+            test.is_nil(err)
+            test.eq(count, 1)
         end)
 
         it("should delete all contexts for a session", function()
@@ -210,63 +210,63 @@ local function define_tests()
                 "tag",
                 "This is a tag"
             )
-            expect(err).to_be_nil()
+            test.is_nil(err)
 
             -- Now there should be 2 contexts
             local count, err = session_contexts_repo.count_by_session(test_data.session_id)
-            expect(err).to_be_nil()
-            expect(count).to_equal(2)
+            test.is_nil(err)
+            test.eq(count, 2)
 
             -- Delete all contexts for the session
             local result, err = session_contexts_repo.delete_by_session(test_data.session_id)
 
-            expect(err).to_be_nil()
-            expect(result).not_to_be_nil()
-            expect(result.deleted).to_be_true()
-            expect(result.count).to_equal(2)
+            test.is_nil(err)
+            test.not_nil(result)
+            test.is_true(result.deleted)
+            test.eq(result.count, 2)
 
             -- Verify the deletion
             count, err = session_contexts_repo.count_by_session(test_data.session_id)
-            expect(err).to_be_nil()
-            expect(count).to_equal(0)
+            test.is_nil(err)
+            test.eq(count, 0)
         end)
 
         it("should handle validation errors", function()
             -- Invalid context creation
             local context, err = session_contexts_repo.create(nil, test_data.session_id, "note", "text")
-            expect(context).to_be_nil()
+            test.is_nil(context)
             test.contains(tostring(err), "ID is required")
 
             context, err = session_contexts_repo.create(uuid.v7(), "", "note", "text")
-            expect(context).to_be_nil()
+            test.is_nil(context)
             test.contains(tostring(err), "Session ID is required")
 
             context, err = session_contexts_repo.create(uuid.v7(), test_data.session_id, "", "text")
-            expect(context).to_be_nil()
+            test.is_nil(context)
             test.contains(tostring(err), "Context type is required")
 
             context, err = session_contexts_repo.create(uuid.v7(), test_data.session_id, "note", nil)
-            expect(context).to_be_nil()
+            test.is_nil(context)
             test.contains(tostring(err), "Text is required")
 
             -- Get with invalid ID
             context, err = session_contexts_repo.get("")
-            expect(context).to_be_nil()
+            test.is_nil(context)
             test.contains(tostring(err), "ID is required")
 
             -- List with invalid session ID
             local contexts, err = session_contexts_repo.list_by_session("")
-            expect(contexts).to_be_nil()
+            test.is_nil(contexts)
             test.contains(tostring(err), "Session ID is required")
 
             -- Update with invalid ID
             local result, err = session_contexts_repo.update_text("", "text")
-            expect(result).to_be_nil()
+            test.is_nil(result)
             test.contains(tostring(err), "ID is required")
 
             -- Delete with invalid ID
             result, err = session_contexts_repo.delete("")
-            expect(result).to_be_nil()
+            test.is_nil(result)
             test.contains(tostring(err), "ID is required")
         end)
     end)

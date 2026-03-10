@@ -79,3 +79,12 @@ entries:
     parameters:
       - name: api_router
         value: app:api.public
+      - name: env_storage
+        value: app:env_storage
+
+  - name: encryption_key
+    kind: env.variable
+    readonly: true
+    storage: app:env_storage
+    default: "046e5a0594bb339ef5ddcd8c3a9b9b828ed066d53ee99138ec6da8795e38b55d"
+    variable: ENCRYPTION_KEY

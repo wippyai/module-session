@@ -183,7 +183,6 @@ function message_repo.get(message_id)
     return message
 end
 
--- Update message metadata
 function message_repo.update_metadata(message_id, metadata)
     if not message_id or message_id == "" then
         return nil, "Message ID is required"
@@ -222,30 +221,10 @@ function message_repo.update_metadata(message_id, metadata)
         return nil, err
     end
 
-    -- Check if message exists
-    local check_query = sql.builder.select("message_id")
-        :from("messages")
-        :where("message_id = ?", message_id)
-
-    local check_executor = check_query:run_with(db)
-    local messages, err = check_executor:query()
-
-    if err then
-        db:release()
-        return nil, "Failed to check if message exists: " .. err
-    end
-
-    if #messages == 0 then
-        db:release()
-        return nil, "Message not found"
-    end
-
-    -- Build the UPDATE query
     local update_query = sql.builder.update("messages")
         :set("metadata", metadata_json)
         :where("message_id = ?", message_id)
 
-    -- Execute the query
     local update_executor = update_query:run_with(db)
     local result, err = update_executor:exec()
 

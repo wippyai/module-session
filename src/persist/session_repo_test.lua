@@ -87,55 +87,55 @@ local function define_tests()
                 { max_tokens = 1000 }
             )
 
-            expect(err).to_be_nil()
-            expect(session).not_to_be_nil()
-            expect(session.session_id).to_equal(test_data.session_id)
-            expect(session.user_id).to_equal(test_data.user_id)
-            expect(session.primary_context_id).to_equal(test_data.context_id)
-            expect(session.title).to_equal("Test Session")
-            expect(session.kind).to_equal("test")
+            test.is_nil(err)
+            test.not_nil(session)
+            test.eq(session.session_id, test_data.session_id)
+            test.eq(session.user_id, test_data.user_id)
+            test.eq(session.primary_context_id, test_data.context_id)
+            test.eq(session.title, "Test Session")
+            test.eq(session.kind, "test")
             test.is_table(session.meta)
-            expect(session.meta.model).to_equal("test-model")
+            test.eq(session.meta.model, "test-model")
             test.is_table(session.config)
-            expect(session.config.max_tokens).to_equal(1000)
-            expect(session.start_date).not_to_be_nil()
-            expect(session.last_message_date).not_to_be_nil()
+            test.eq(session.config.max_tokens, 1000)
+            test.not_nil(session.start_date)
+            test.not_nil(session.last_message_date)
         end)
 
         it("should get a session by ID", function()
             local session, err = session_repo.get(test_data.session_id)
 
-            expect(err).to_be_nil()
-            expect(session).not_to_be_nil()
-            expect(session.session_id).to_equal(test_data.session_id)
-            expect(session.user_id).to_equal(test_data.user_id)
-            expect(session.primary_context_id).to_equal(test_data.context_id)
-            expect(session.title).to_equal("Test Session")
-            expect(session.kind).to_equal("test")
+            test.is_nil(err)
+            test.not_nil(session)
+            test.eq(session.session_id, test_data.session_id)
+            test.eq(session.user_id, test_data.user_id)
+            test.eq(session.primary_context_id, test_data.context_id)
+            test.eq(session.title, "Test Session")
+            test.eq(session.kind, "test")
             test.is_table(session.meta)
-            expect(session.meta.model).to_equal("test-model")
+            test.eq(session.meta.model, "test-model")
             test.is_table(session.config)
-            expect(session.config.max_tokens).to_equal(1000)
+            test.eq(session.config.max_tokens, 1000)
         end)
 
         it("should get a session by ID with user filter", function()
             local session, err = session_repo.get(test_data.session_id, test_data.user_id)
-            expect(err).to_be_nil()
-            expect(session).not_to_be_nil()
-            expect(session.session_id).to_equal(test_data.session_id)
+            test.is_nil(err)
+            test.not_nil(session)
+            test.eq(session.session_id, test_data.session_id)
 
             -- Different user should not find the session
             session, err = session_repo.get(test_data.session_id, uuid.v7())
-            expect(session).to_be_nil()
+            test.is_nil(session)
             test.contains(tostring(err), "not found")
         end)
 
         it("should list sessions by user ID", function()
             local sessions, err = session_repo.list_by_user(test_data.user_id)
 
-            expect(err).to_be_nil()
-            expect(sessions).not_to_be_nil()
-            expect(#sessions >= 1).to_be_true()
+            test.is_nil(err)
+            test.not_nil(sessions)
+            test.is_true(#sessions >= 1)
 
             local found = false
             for _, session in ipairs(sessions) do
@@ -145,7 +145,7 @@ local function define_tests()
                 end
             end
 
-            expect(found).to_be_true()
+            test.is_true(found)
         end)
 
         it("should update session title via update_session_meta", function()
@@ -154,15 +154,15 @@ local function define_tests()
                 { title = "Updated Session Title" }
             )
 
-            expect(err).to_be_nil()
-            expect(result).not_to_be_nil()
-            expect(result.session_id).to_equal(test_data.session_id)
-            expect(result.title).to_equal("Updated Session Title")
-            expect(result.updated).to_be_true()
+            test.is_nil(err)
+            test.not_nil(result)
+            test.eq(result.session_id, test_data.session_id)
+            test.eq(result.title, "Updated Session Title")
+            test.is_true(result.updated)
 
             -- Verify the update
             local session, err = session_repo.get(test_data.session_id)
-            expect(session.title).to_equal("Updated Session Title")
+            test.eq(session.title, "Updated Session Title")
         end)
 
         it("should update last message date", function()
@@ -172,15 +172,15 @@ local function define_tests()
                 { last_message_date = timestamp }
             )
 
-            expect(err).to_be_nil()
-            expect(result).not_to_be_nil()
-            expect(result.session_id).to_equal(test_data.session_id)
-            expect(result.last_message_date).to_equal(time.unix(timestamp, 0):format(time.RFC3339))
-            expect(result.updated).to_be_true()
+            test.is_nil(err)
+            test.not_nil(result)
+            test.eq(result.session_id, test_data.session_id)
+            test.eq(result.last_message_date, time.unix(timestamp, 0):format(time.RFC3339))
+            test.is_true(result.updated)
 
             -- Verify the update
             local session, err = session_repo.get(test_data.session_id)
-            expect(session.last_message_date).to_equal(time.unix(timestamp, 0):format(time.RFC3339))
+            test.eq(session.last_message_date, time.unix(timestamp, 0):format(time.RFC3339))
         end)
 
         it("should update multiple session fields at once", function()
@@ -199,71 +199,71 @@ local function define_tests()
                 updates
             )
 
-            expect(err).to_be_nil()
-            expect(result).not_to_be_nil()
-            expect(result.session_id).to_equal(test_data.session_id)
-            expect(result.title).to_equal(updates.title)
-            expect(result.status).to_equal(updates.status)
-            expect(result.kind).to_equal(updates.kind)
-            expect(result.updated).to_be_true()
+            test.is_nil(err)
+            test.not_nil(result)
+            test.eq(result.session_id, test_data.session_id)
+            test.eq(result.title, updates.title)
+            test.eq(result.status, updates.status)
+            test.eq(result.kind, updates.kind)
+            test.is_true(result.updated)
 
             -- Verify the update
             local session, err = session_repo.get(test_data.session_id)
-            expect(session.title).to_equal(updates.title)
-            expect(session.kind).to_equal(updates.kind)
+            test.eq(session.title, updates.title)
+            test.eq(session.kind, updates.kind)
             test.is_table(session.meta)
-            expect(session.meta.model).to_equal("new-model")
-            expect(session.meta.temperature).to_equal(0.7)
+            test.eq(session.meta.model, "new-model")
+            test.eq(session.meta.temperature, 0.7)
             test.is_table(session.config)
-            expect(session.config.max_tokens).to_equal(2000)
+            test.eq(session.config.max_tokens, 2000)
             test.is_table(session.public_meta)
-            expect(session.public_meta.theme).to_equal("dark")
+            test.eq(session.public_meta.theme, "dark")
         end)
 
         it("should count sessions by user", function()
             local count, err = session_repo.count_by_user(test_data.user_id)
 
-            expect(err).to_be_nil()
-            expect(count >= 1).to_be_true()
+            test.is_nil(err)
+            test.is_true(count >= 1)
         end)
 
         it("should handle validation errors", function()
             -- Invalid session creation
             local session, err = session_repo.create(nil, test_data.user_id, test_data.context_id)
-            expect(session).to_be_nil()
+            test.is_nil(session)
             test.contains(tostring(err), "Session ID is required")
 
             session, err = session_repo.create(uuid.v7(), "", test_data.context_id)
-            expect(session).to_be_nil()
+            test.is_nil(session)
             test.contains(tostring(err), "User ID is required")
 
             session, err = session_repo.create(uuid.v7(), test_data.user_id, "")
-            expect(session).to_be_nil()
+            test.is_nil(session)
             test.contains(tostring(err), "Primary context ID is required")
 
             -- Get with invalid ID
             session, err = session_repo.get("")
-            expect(session).to_be_nil()
+            test.is_nil(session)
             test.contains(tostring(err), "Session ID is required")
 
             -- List with invalid user ID
             local sessions, err = session_repo.list_by_user("")
-            expect(sessions).to_be_nil()
+            test.is_nil(sessions)
             test.contains(tostring(err), "User ID is required")
 
             -- Update with invalid session ID
             local result, err = session_repo.update_session_meta("", { title = "x" })
-            expect(result).to_be_nil()
+            test.is_nil(result)
             test.contains(tostring(err), "Session ID is required")
 
             -- Update non-existent session
             result, err = session_repo.update_session_meta(uuid.v7(), { title = "x" })
-            expect(result).to_be_nil()
+            test.is_nil(result)
             test.contains(tostring(err), "Session not found")
 
             -- Count with invalid user ID
             local count, err_count = session_repo.count_by_user("")
-            expect(count).to_be_nil()
+            test.is_nil(count)
             test.contains(tostring(err_count), "User ID is required")
         end)
 
@@ -277,23 +277,23 @@ local function define_tests()
                 "Temporary Session"
             )
 
-            expect(err).to_be_nil()
+            test.is_nil(err)
 
             -- Delete it
             local result, err = session_repo.delete(temp_session_id)
 
-            expect(err).to_be_nil()
-            expect(result).not_to_be_nil()
-            expect(result.deleted).to_be_true()
+            test.is_nil(err)
+            test.not_nil(result)
+            test.is_true(result.deleted)
 
             -- Verify the deletion
             session, err = session_repo.get(temp_session_id)
-            expect(session).to_be_nil()
+            test.is_nil(session)
             test.contains(tostring(err), "not found")
 
             -- Delete non-existent session
             result, err = session_repo.delete(uuid.v7())
-            expect(result).to_be_nil()
+            test.is_nil(result)
             test.contains(tostring(err), "Session not found")
         end)
 
@@ -320,28 +320,28 @@ local function define_tests()
                     initial_titles[id_key],
                     "isolation_test"
                 )
-                expect(err).to_be_nil()
-                expect(session).not_to_be_nil()
-                expect(session.title).to_equal(initial_titles[id_key])
+                test.is_nil(err)
+                test.not_nil(session)
+                test.eq(session.title, initial_titles[id_key])
             end
 
             -- Verify all three sessions exist
             local all_sessions, err = session_repo.list_by_user(user_id)
-            expect(err).to_be_nil()
+            test.is_nil(err)
 
             local found_sessions = {}
             for _, session in ipairs(all_sessions) do
                 for id_key, id in pairs(session_ids) do
                     if session.session_id == id then
                         found_sessions[id_key] = session
-                        expect(session.title).to_equal(initial_titles[id_key])
+                        test.eq(session.title, initial_titles[id_key])
                     end
                 end
             end
 
-            expect(found_sessions.id1).not_to_be_nil()
-            expect(found_sessions.id2).not_to_be_nil()
-            expect(found_sessions.id3).not_to_be_nil()
+            test.not_nil(found_sessions.id1)
+            test.not_nil(found_sessions.id2)
+            test.not_nil(found_sessions.id3)
 
             -- Update just the second session's title
             local updated_title = "UPDATED Second Session"
@@ -349,21 +349,21 @@ local function define_tests()
                 session_ids.id2,
                 { title = updated_title }
             )
-            expect(err).to_be_nil()
-            expect(result).not_to_be_nil()
-            expect(result.updated).to_be_true()
+            test.is_nil(err)
+            test.not_nil(result)
+            test.is_true(result.updated)
 
             -- Verify only the second session's title changed
             local updated_sessions, err = session_repo.list_by_user(user_id)
-            expect(err).to_be_nil()
+            test.is_nil(err)
 
             for _, session in ipairs(updated_sessions) do
                 if session.session_id == session_ids.id1 then
-                    expect(session.title).to_equal(initial_titles.id1)
+                    test.eq(session.title, initial_titles.id1)
                 elseif session.session_id == session_ids.id2 then
-                    expect(session.title).to_equal(updated_title)
+                    test.eq(session.title, updated_title)
                 elseif session.session_id == session_ids.id3 then
-                    expect(session.title).to_equal(initial_titles.id3)
+                    test.eq(session.title, initial_titles.id3)
                 end
             end
 
@@ -374,43 +374,43 @@ local function define_tests()
             }
 
             result, err = session_repo.update_session_meta(session_ids.id1, metadata_updates)
-            expect(err).to_be_nil()
-            expect(result).not_to_be_nil()
+            test.is_nil(err)
+            test.not_nil(result)
 
             -- Verify isolation: only first session has updated metadata
             local final_sessions = {}
             for id_key, id in pairs(session_ids) do
                 local session, err = session_repo.get(id)
-                expect(err).to_be_nil()
+                test.is_nil(err)
                 final_sessions[id_key] = session
             end
 
-            expect(final_sessions.id1.title).to_equal(metadata_updates.title)
-            expect(final_sessions.id1.public_meta.key).to_equal("value")
+            test.eq(final_sessions.id1.title, metadata_updates.title)
+            test.eq(final_sessions.id1.public_meta.key, "value")
 
-            expect(final_sessions.id2.title).to_equal(updated_title)
-            expect(final_sessions.id2.public_meta.key).to_be_nil()
+            test.eq(final_sessions.id2.title, updated_title)
+            test.is_nil(final_sessions.id2.public_meta.key)
 
-            expect(final_sessions.id3.title).to_equal(initial_titles.id3)
-            expect(final_sessions.id3.public_meta.key).to_be_nil()
+            test.eq(final_sessions.id3.title, initial_titles.id3)
+            test.is_nil(final_sessions.id3.public_meta.key)
 
             -- Delete the second session
             result, err = session_repo.delete(session_ids.id2)
-            expect(err).to_be_nil()
-            expect(result.deleted).to_be_true()
+            test.is_nil(err)
+            test.is_true(result.deleted)
 
             -- Verify deletion isolation
             local session, err = session_repo.get(session_ids.id2)
-            expect(session).to_be_nil()
+            test.is_nil(session)
             test.contains(tostring(err), "not found")
 
             session, err = session_repo.get(session_ids.id1)
-            expect(err).to_be_nil()
-            expect(session).not_to_be_nil()
+            test.is_nil(err)
+            test.not_nil(session)
 
             session, err = session_repo.get(session_ids.id3)
-            expect(err).to_be_nil()
-            expect(session).not_to_be_nil()
+            test.is_nil(err)
+            test.not_nil(session)
 
             -- Clean up
             session_repo.delete(session_ids.id1)

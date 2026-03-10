@@ -129,7 +129,7 @@ local function define_tests()
                     "title",
                     "content"
                 )
-                expect(artifact).to_be_nil()
+                test.is_nil(artifact)
                 test.contains(tostring(err), "No authenticated user found")
             end
         end)
@@ -137,50 +137,50 @@ local function define_tests()
         it("should get an artifact by ID", function()
             local artifact, err = artifact_repo.get(test_data.artifact_id)
 
-            expect(err).to_be_nil()
-            expect(artifact).not_to_be_nil()
-            expect(artifact.artifact_id).to_equal(test_data.artifact_id)
-            expect(artifact.session_id).to_equal(test_data.session_id)
-            expect(artifact.kind).to_equal("static")
-            expect(artifact.title).to_equal("Test Artifact")
-            expect(artifact.content).to_equal("This is test artifact content")
+            test.is_nil(err)
+            test.not_nil(artifact)
+            test.eq(artifact.artifact_id, test_data.artifact_id)
+            test.eq(artifact.session_id, test_data.session_id)
+            test.eq(artifact.kind, "static")
+            test.eq(artifact.title, "Test Artifact")
+            test.eq(artifact.content, "This is test artifact content")
         end)
 
         it("should parse metadata JSON when retrieving", function()
             local artifact, err = artifact_repo.get(test_data.artifact_id2)
 
-            expect(err).to_be_nil()
-            expect(artifact).not_to_be_nil()
-            expect(artifact.meta).not_to_be_nil()
-            expect(artifact.meta.content_type).to_equal("text/markdown")
-            expect(artifact.meta.size).to_equal(1024)
-            expect(#artifact.meta.tags).to_equal(2)
-            expect(artifact.meta.tags[1]).to_equal("test")
+            test.is_nil(err)
+            test.not_nil(artifact)
+            test.not_nil(artifact.meta)
+            test.eq(artifact.meta.content_type, "text/markdown")
+            test.eq(artifact.meta.size, 1024)
+            test.eq(#artifact.meta.tags, 2)
+            test.eq(artifact.meta.tags[1], "test")
         end)
 
         it("should list artifacts by session ID", function()
             local artifacts, err = artifact_repo.list_by_session(test_data.session_id)
 
-            expect(err).to_be_nil()
-            expect(artifacts).not_to_be_nil()
-            expect(#artifacts).to_equal(2)
+            test.is_nil(err)
+            test.not_nil(artifacts)
+            test.eq(#artifacts, 2)
         end)
 
         it("should list artifacts by kind", function()
             local artifacts, err = artifact_repo.list_by_kind(test_data.session_id, "static")
 
-            expect(err).to_be_nil()
-            expect(artifacts).not_to_be_nil()
-            expect(#artifacts).to_equal(1)
+            test.is_nil(err)
+            test.not_nil(artifacts)
+            test.eq(#artifacts, 1)
             assert(artifacts)
-            expect(artifacts[1].kind).to_equal("static")
+            test.eq(artifacts[1].kind, "static")
 
             artifacts, err = artifact_repo.list_by_kind(test_data.session_id, "dynamic")
-            expect(err).to_be_nil()
-            expect(artifacts).not_to_be_nil()
+            test.is_nil(err)
+            test.not_nil(artifacts)
             assert(artifacts)
-            expect(#artifacts).to_equal(1)
-            expect(artifacts[1].kind).to_equal("dynamic")
+            test.eq(#artifacts, 1)
+            test.eq(artifacts[1].kind, "dynamic")
         end)
 
         it("should update artifact metadata", function()
@@ -195,109 +195,109 @@ local function define_tests()
 
             local update_result, err = artifact_repo.update(test_data.artifact_id, updates)
 
-            expect(err).to_be_nil()
-            expect(update_result).not_to_be_nil()
-            expect(update_result.updated).to_be_true()
+            test.is_nil(err)
+            test.not_nil(update_result)
+            test.is_true(update_result.updated)
 
             -- Verify updates
             local artifact, err = artifact_repo.get(test_data.artifact_id)
-            expect(err).to_be_nil()
-            expect(artifact.title).to_equal("Updated Artifact")
-            expect(artifact.meta.content_type).to_equal("text/html")
-            expect(artifact.meta.size).to_equal(2048)
-            expect(#artifact.meta.tags).to_equal(2)
-            expect(artifact.meta.tags[1]).to_equal("updated")
+            test.is_nil(err)
+            test.eq(artifact.title, "Updated Artifact")
+            test.eq(artifact.meta.content_type, "text/html")
+            test.eq(artifact.meta.size, 2048)
+            test.eq(#artifact.meta.tags, 2)
+            test.eq(artifact.meta.tags[1], "updated")
         end)
 
         it("should update artifact content", function()
             local content = "This is updated content"
             local update_result, err = artifact_repo.update_content(test_data.artifact_id, content)
 
-            expect(err).to_be_nil()
-            expect(update_result).not_to_be_nil()
-            expect(update_result.updated).to_be_true()
+            test.is_nil(err)
+            test.not_nil(update_result)
+            test.is_true(update_result.updated)
 
             -- Verify content update
             local artifact_content, err = artifact_repo.get_content(test_data.artifact_id)
-            expect(err).to_be_nil()
-            expect(artifact_content).to_equal(content)
+            test.is_nil(err)
+            test.eq(artifact_content, content)
         end)
 
         it("should count artifacts in a session", function()
             local count, err = artifact_repo.count_by_session(test_data.session_id)
 
-            expect(err).to_be_nil()
-            expect(count).to_equal(2)
+            test.is_nil(err)
+            test.eq(count, 2)
         end)
 
         it("should count artifacts by kind", function()
             local count, err = artifact_repo.count_by_kind(test_data.session_id, "static")
 
-            expect(err).to_be_nil()
-            expect(count).to_equal(1)
+            test.is_nil(err)
+            test.eq(count, 1)
 
             count, err = artifact_repo.count_by_kind(test_data.session_id, "dynamic")
-            expect(err).to_be_nil()
-            expect(count).to_equal(1)
+            test.is_nil(err)
+            test.eq(count, 1)
 
             count, err = artifact_repo.count_by_kind(test_data.session_id, "nonexistent")
-            expect(err).to_be_nil()
-            expect(count).to_equal(0)
+            test.is_nil(err)
+            test.eq(count, 0)
         end)
 
         it("should delete an artifact", function()
             -- Verify we can get the artifact
             local artifact, err = artifact_repo.get(test_data.artifact_id)
-            expect(err).to_be_nil()
-            expect(artifact).not_to_be_nil()
+            test.is_nil(err)
+            test.not_nil(artifact)
 
             -- Delete it
             local result, err = artifact_repo.delete(test_data.artifact_id)
 
-            expect(err).to_be_nil()
-            expect(result).not_to_be_nil()
-            expect(result.deleted).to_be_true()
+            test.is_nil(err)
+            test.not_nil(result)
+            test.is_true(result.deleted)
 
             -- Verify the deletion
             artifact, err = artifact_repo.get(test_data.artifact_id)
-            expect(artifact).to_be_nil()
+            test.is_nil(artifact)
             test.contains(tostring(err), "not found")
 
             -- Count should now be 1
             local count, err = artifact_repo.count_by_session(test_data.session_id)
-            expect(err).to_be_nil()
-            expect(count).to_equal(1)
+            test.is_nil(err)
+            test.eq(count, 1)
         end)
 
         it("should handle validation errors", function()
             -- Get with invalid ID
             local artifact, err = artifact_repo.get("")
-            expect(artifact).to_be_nil()
+            test.is_nil(artifact)
             test.contains(tostring(err), "Artifact ID is required")
 
             -- List by invalid session ID
             local artifacts, err = artifact_repo.list_by_session("")
-            expect(artifacts).to_be_nil()
+            test.is_nil(artifacts)
             test.contains(tostring(err), "Session ID is required")
 
             -- Delete with invalid ID
             local result, err = artifact_repo.delete("")
-            expect(result).to_be_nil()
+            test.is_nil(result)
             test.contains(tostring(err), "Artifact ID is required")
 
             -- Delete non-existent artifact
             result, err = artifact_repo.delete(uuid.v7())
-            expect(result).to_be_nil()
+            test.is_nil(result)
             test.contains(tostring(err), "Artifact not found")
 
             -- Update with invalid ID
             result, err = artifact_repo.update("", { title = "x" })
-            expect(result).to_be_nil()
+            test.is_nil(result)
             test.contains(tostring(err), "Artifact ID is required")
 
             -- Update content with invalid ID
             result, err = artifact_repo.update_content("", "content")
-            expect(result).to_be_nil()
+            test.is_nil(result)
             test.contains(tostring(err), "Artifact ID is required")
         end)
     end)
