@@ -36,20 +36,20 @@ local function define_tests()
                 "This is test context data"
             )
 
-            expect(err).to_be_nil()
-            expect(context).not_to_be_nil()
-            expect(context.context_id).to_equal(test_data.context_id)
-            expect(context.type).to_equal("test_type")
+            test.is_nil(err)
+            test.not_nil(context)
+            test.eq(context.context_id, test_data.context_id)
+            test.eq(context.type, "test_type")
         end)
 
         it("should get a context by ID", function()
             local context, err = context_repo.get(test_data.context_id)
 
-            expect(err).to_be_nil()
-            expect(context).not_to_be_nil()
-            expect(context.context_id).to_equal(test_data.context_id)
-            expect(context.type).to_equal("test_type")
-            expect(context.data).to_equal("This is test context data")
+            test.is_nil(err)
+            test.not_nil(context)
+            test.eq(context.context_id, test_data.context_id)
+            test.eq(context.type, "test_type")
+            test.eq(context.data, "This is test context data")
         end)
 
         it("should create another context of same type", function()
@@ -59,17 +59,17 @@ local function define_tests()
                 "Another test context data"
             )
 
-            expect(err).to_be_nil()
-            expect(context).not_to_be_nil()
-            expect(context.context_id).to_equal(test_data.context_id2)
+            test.is_nil(err)
+            test.not_nil(context)
+            test.eq(context.context_id, test_data.context_id2)
         end)
 
         it("should get contexts by type", function()
             local contexts, err = context_repo.get_by_type("test_type")
 
-            expect(err).to_be_nil()
-            expect(contexts).not_to_be_nil()
-            expect(#contexts >= 2).to_be_true()
+            test.is_nil(err)
+            test.not_nil(contexts)
+            test.is_true(#contexts >= 2)
 
             -- Find our test contexts in the results
             local found_id1 = false
@@ -84,24 +84,24 @@ local function define_tests()
                 end
             end
 
-            expect(found_id1).to_be_true()
-            expect(found_id2).to_be_true()
+            test.is_true(found_id1)
+            test.is_true(found_id2)
         end)
 
         it("should get contexts by type with limit and offset", function()
             -- First, get with limit 1
             local contexts, err = context_repo.get_by_type("test_type", 1)
 
-            expect(err).to_be_nil()
-            expect(contexts).not_to_be_nil()
-            expect(#contexts).to_equal(1)
+            test.is_nil(err)
+            test.not_nil(contexts)
+            test.eq(#contexts, 1)
 
             -- Then, get with offset 1 to get the second record
             contexts, err = context_repo.get_by_type("test_type", 1, 1)
 
-            expect(err).to_be_nil()
-            expect(contexts).not_to_be_nil()
-            expect(#contexts).to_equal(1)
+            test.is_nil(err)
+            test.not_nil(contexts)
+            test.eq(#contexts, 1)
 
             -- The two contexts should be different
             local first_context_id = nil
@@ -126,64 +126,64 @@ local function define_tests()
                 "Updated context data"
             )
 
-            expect(err).to_be_nil()
-            expect(updated).not_to_be_nil()
-            expect(updated.context_id).to_equal(test_data.context_id)
-            expect(updated.updated).to_be_true()
+            test.is_nil(err)
+            test.not_nil(updated)
+            test.eq(updated.context_id, test_data.context_id)
+            test.is_true(updated.updated)
 
             -- Verify the update by getting the context
             local context, err = context_repo.get(test_data.context_id)
-            expect(context.data).to_equal("Updated context data")
+            test.eq(context.data, "Updated context data")
         end)
 
         it("should delete a context", function()
             local result, err = context_repo.delete(test_data.context_id2)
 
-            expect(err).to_be_nil()
-            expect(result).not_to_be_nil()
-            expect(result.deleted).to_be_true()
+            test.is_nil(err)
+            test.not_nil(result)
+            test.is_true(result.deleted)
 
             -- Verify the deletion by trying to get the context
             local context, err = context_repo.get(test_data.context_id2)
-            expect(context).to_be_nil()
-            expect(err).not_to_be_nil()
+            test.is_nil(context)
+            test.not_nil(err)
             test.contains(tostring(err), "not found")
         end)
 
         it("should handle validation errors", function()
             -- Missing context_id
             local context, err = context_repo.create(nil, "test_type", "data")
-            expect(context).to_be_nil()
+            test.is_nil(context)
             test.contains(tostring(err), "Context ID is required")
 
             -- Missing type
             context, err = context_repo.create(uuid.v7(), "", "data")
-            expect(context).to_be_nil()
+            test.is_nil(context)
             test.contains(tostring(err), "Context type is required")
 
             -- Get with invalid ID
             context, err = context_repo.get("")
-            expect(context).to_be_nil()
+            test.is_nil(context)
             test.contains(tostring(err), "Context ID is required")
 
             -- Update with invalid ID
             local result, err = context_repo.update("", "data")
-            expect(result).to_be_nil()
+            test.is_nil(result)
             test.contains(tostring(err), "Context ID is required")
 
             -- Update non-existent context
             result, err = context_repo.update(uuid.v7(), "data")
-            expect(result).to_be_nil()
+            test.is_nil(result)
             test.contains(tostring(err), "Context not found")
 
             -- Delete with invalid ID
             result, err = context_repo.delete("")
-            expect(result).to_be_nil()
+            test.is_nil(result)
             test.contains(tostring(err), "Context ID is required")
 
             -- Delete non-existent context
             result, err = context_repo.delete(uuid.v7())
-            expect(result).to_be_nil()
+            test.is_nil(result)
             test.contains(tostring(err), "Context not found")
         end)
 
@@ -202,14 +202,14 @@ local function define_tests()
                     "delete_test_type",
                     "Test data for context " .. i
                 )
-                expect(err).to_be_nil()
-                expect(context).not_to_be_nil()
+                test.is_nil(err)
+                test.not_nil(context)
             end
 
             -- Verify all three contexts exist
             local all_contexts, err = context_repo.get_by_type("delete_test_type")
-            expect(err).to_be_nil()
-            expect(#all_contexts >= 3).to_be_true()
+            test.is_nil(err)
+            test.is_true(#all_contexts >= 3)
 
             -- Count how many of our test contexts exist
             local context_count = 0
@@ -220,29 +220,29 @@ local function define_tests()
                     end
                 end
             end
-            expect(context_count).to_equal(3)
+            test.eq(context_count, 3)
 
             -- Delete just the second context
             local result, err = context_repo.delete(test_ids.id2)
-            expect(err).to_be_nil()
-            expect(result).not_to_be_nil()
-            expect(result.deleted).to_be_true()
+            test.is_nil(err)
+            test.not_nil(result)
+            test.is_true(result.deleted)
 
             -- Verify the deleted context no longer exists
             local deleted_context, err = context_repo.get(test_ids.id2)
-            expect(deleted_context).to_be_nil()
+            test.is_nil(deleted_context)
             test.contains(tostring(err), "Context not found")
 
             -- Verify the other contexts still exist
             local context1, err = context_repo.get(test_ids.id1)
-            expect(err).to_be_nil()
-            expect(context1).not_to_be_nil()
-            expect(context1.context_id).to_equal(test_ids.id1)
+            test.is_nil(err)
+            test.not_nil(context1)
+            test.eq(context1.context_id, test_ids.id1)
 
             local context3, err = context_repo.get(test_ids.id3)
-            expect(err).to_be_nil()
-            expect(context3).not_to_be_nil()
-            expect(context3.context_id).to_equal(test_ids.id3)
+            test.is_nil(err)
+            test.not_nil(context3)
+            test.eq(context3.context_id, test_ids.id3)
 
             -- Clean up the remaining test contexts
             context_repo.delete(test_ids.id1)

@@ -1,5 +1,7 @@
 /.idea
 /.vscode
+/.wippy
+/test/.wippy
 /runtime
 /dist
 /build

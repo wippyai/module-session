@@ -234,7 +234,8 @@ function message_handlers.process_tools(ctx, op)
                 call_id = call_id,
                 function_name = tool_call.name,
                 registry_id = tool_call.registry_id,
-                status = consts.FUNC_STATUS.PENDING
+                status = consts.FUNC_STATUS.PENDING,
+                provider_metadata = tool_call.provider_metadata
             })
 
             if not err then

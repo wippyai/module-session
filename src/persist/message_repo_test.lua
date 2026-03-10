@@ -92,12 +92,12 @@ local function define_tests()
                 "This is a test message"
             )
 
-            expect(err).to_be_nil()
-            expect(message).not_to_be_nil()
-            expect(message.message_id).to_equal(test_data.message_id)
-            expect(message.session_id).to_equal(test_data.session_id)
-            expect(message.type).to_equal("user")
-            expect(message.date).not_to_be_nil()
+            test.is_nil(err)
+            test.not_nil(message)
+            test.eq(message.message_id, test_data.message_id)
+            test.eq(message.session_id, test_data.session_id)
+            test.eq(message.type, "user")
+            test.not_nil(message.date)
         end)
 
         it("should create a message with binary data and metadata", function()
@@ -117,41 +117,41 @@ local function define_tests()
                 metadata
             )
 
-            expect(err).to_be_nil()
-            expect(message).not_to_be_nil()
-            expect(message.message_id).to_equal(test_data.message_id2)
-            expect(message.session_id).to_equal(test_data.session_id)
-            expect(message.type).to_equal("assistant")
+            test.is_nil(err)
+            test.not_nil(message)
+            test.eq(message.message_id, test_data.message_id2)
+            test.eq(message.session_id, test_data.session_id)
+            test.eq(message.type, "assistant")
         end)
 
         it("should get a message by ID", function()
             local message, err = message_repo.get(test_data.message_id)
 
-            expect(err).to_be_nil()
-            expect(message).not_to_be_nil()
-            expect(message.message_id).to_equal(test_data.message_id)
-            expect(message.session_id).to_equal(test_data.session_id)
-            expect(message.type).to_equal("user")
-            expect(message.data).to_equal("This is a test message")
+            test.is_nil(err)
+            test.not_nil(message)
+            test.eq(message.message_id, test_data.message_id)
+            test.eq(message.session_id, test_data.session_id)
+            test.eq(message.type, "user")
+            test.eq(message.data, "This is a test message")
         end)
 
         it("should parse metadata JSON when retrieving", function()
             local message, err = message_repo.get(test_data.message_id2)
 
-            expect(err).to_be_nil()
-            expect(message).not_to_be_nil()
-            expect(message.metadata).not_to_be_nil()
-            expect(message.metadata.model).to_equal("test-model")
-            expect(message.metadata.tokens.prompt).to_equal(10)
-            expect(message.metadata.tokens.completion).to_equal(5)
+            test.is_nil(err)
+            test.not_nil(message)
+            test.not_nil(message.metadata)
+            test.eq(message.metadata.model, "test-model")
+            test.eq(message.metadata.tokens.prompt, 10)
+            test.eq(message.metadata.tokens.completion, 5)
         end)
 
         it("should list messages by session ID", function()
             local messages, err = message_repo.list_by_session(test_data.session_id)
 
-            expect(err).to_be_nil()
-            expect(messages.messages).not_to_be_nil()
-            expect(#messages.messages).to_equal(2)
+            test.is_nil(err)
+            test.not_nil(messages.messages)
+            test.eq(#messages.messages, 2)
         end)
 
         it("should list messages by session ID with cursor pagination", function()
@@ -167,17 +167,17 @@ local function define_tests()
                     "test_pagination",
                     "Message " .. i
                 )
-                expect(err).to_be_nil()
-                expect(result).not_to_be_nil()
+                test.is_nil(err)
+                test.not_nil(result)
             end
 
             -- Test default pagination (no cursor)
             local result, err = message_repo.list_by_session(test_data.session_id)
 
-            expect(err).to_be_nil()
-            expect(result).not_to_be_nil()
-            expect(result.messages).not_to_be_nil()
-            expect(#result.messages > 3).to_be_true()
+            test.is_nil(err)
+            test.not_nil(result)
+            test.not_nil(result.messages)
+            test.ok(#result.messages > 3)
 
             -- Extract cursor from first result
             assert(result.messages)
@@ -185,23 +185,23 @@ local function define_tests()
 
             -- Test "before" pagination (older messages)
             local before_result, err = message_repo.list_by_session(test_data.session_id, 2, cursor, "before")
-            expect(err).to_be_nil()
-            expect(before_result).not_to_be_nil()
-            expect(before_result.messages).not_to_be_nil()
-            expect(#before_result.messages).to_equal(2)
-            expect(before_result.next_cursor).not_to_be_nil()
+            test.is_nil(err)
+            test.not_nil(before_result)
+            test.not_nil(before_result.messages)
+            test.eq(#before_result.messages, 2)
+            test.not_nil(before_result.next_cursor)
 
             -- Test "after" pagination (newer messages)
             local after_result, err = message_repo.list_by_session(test_data.session_id, 2, cursor, "after")
-            expect(err).to_be_nil()
-            expect(after_result).not_to_be_nil()
-            expect(after_result.messages).not_to_be_nil()
+            test.is_nil(err)
+            test.not_nil(after_result)
+            test.not_nil(after_result.messages)
 
             -- Test pagination with limit
             local limit_result, err = message_repo.list_by_session(test_data.session_id, 3)
-            expect(err).to_be_nil()
-            expect(limit_result).not_to_be_nil()
-            expect(#limit_result.messages).to_equal(3)
+            test.is_nil(err)
+            test.not_nil(limit_result)
+            test.eq(#limit_result.messages, 3)
 
             -- Clean up the test messages
             for _, message_id in ipairs(message_ids) do
@@ -212,114 +212,193 @@ local function define_tests()
         it("should list messages by type", function()
             local messages, err = message_repo.list_by_type(test_data.session_id, "user")
 
-            expect(err).to_be_nil()
-            expect(messages).not_to_be_nil()
+            test.is_nil(err)
+            test.not_nil(messages)
             assert(messages)
-            expect(#messages).to_equal(1)
-            expect(messages[1].type).to_equal("user")
+            test.eq(#messages, 1)
+            test.eq(messages[1].type, "user")
 
             messages, err = message_repo.list_by_type(test_data.session_id, "assistant")
-            expect(err).to_be_nil()
-            expect(messages).not_to_be_nil()
+            test.is_nil(err)
+            test.not_nil(messages)
             assert(messages)
-            expect(#messages).to_equal(1)
-            expect(messages[1].type).to_equal("assistant")
+            test.eq(#messages, 1)
+            test.eq(messages[1].type, "assistant")
         end)
 
         it("should get the latest message", function()
             local message, err = message_repo.get_latest(test_data.session_id)
-            expect(err).to_be_nil()
-            expect(message).not_to_be_nil()
+            test.is_nil(err)
+            test.not_nil(message)
             -- The most recent message should be the assistant message (the second one created)
-            expect(message.message_id).to_equal(test_data.message_id2)
-            expect(message.type).to_equal("assistant")
+            test.eq(message.message_id, test_data.message_id2)
+            test.eq(message.type, "assistant")
         end)
 
         it("should count messages in a session", function()
             local count, err = message_repo.count_by_session(test_data.session_id)
 
-            expect(err).to_be_nil()
-            expect(count).to_equal(2)
+            test.is_nil(err)
+            test.eq(count, 2)
         end)
 
         it("should count messages by type", function()
             local count, err = message_repo.count_by_type(test_data.session_id, "user")
 
-            expect(err).to_be_nil()
-            expect(count).to_equal(1)
+            test.is_nil(err)
+            test.eq(count, 1)
 
             count, err = message_repo.count_by_type(test_data.session_id, "assistant")
-            expect(err).to_be_nil()
-            expect(count).to_equal(1)
+            test.is_nil(err)
+            test.eq(count, 1)
 
             count, err = message_repo.count_by_type(test_data.session_id, "system")
-            expect(err).to_be_nil()
-            expect(count).to_equal(0)
+            test.is_nil(err)
+            test.eq(count, 0)
+        end)
+
+        it("should merge metadata when updating with existing metadata", function()
+            -- message_id2 already has metadata: {model = "test-model", tokens = {prompt = 10, completion = 5}}
+            local result, err = message_repo.update_metadata(test_data.message_id2, {
+                status = "completed",
+                score = 42
+            })
+
+            test.is_nil(err)
+            test.not_nil(result)
+            test.is_true(result.updated)
+
+            -- Verify the metadata was merged, not replaced
+            local message, err = message_repo.get(test_data.message_id2)
+            test.is_nil(err)
+            test.not_nil(message)
+            test.not_nil(message.metadata)
+
+            -- Original fields should still be present
+            test.eq(message.metadata.model, "test-model")
+            test.not_nil(message.metadata.tokens)
+            test.eq(message.metadata.tokens.prompt, 10)
+            test.eq(message.metadata.tokens.completion, 5)
+
+            -- New fields should be added
+            test.eq(message.metadata.status, "completed")
+            test.eq(message.metadata.score, 42)
+        end)
+
+        it("should overwrite existing keys when merging metadata", function()
+            -- message_id2 now has merged metadata from previous test
+            local result, err = message_repo.update_metadata(test_data.message_id2, {
+                model = "updated-model"
+            })
+
+            test.is_nil(err)
+            test.not_nil(result)
+
+            local message, err = message_repo.get(test_data.message_id2)
+            test.is_nil(err)
+
+            -- Overwritten key
+            test.eq(message.metadata.model, "updated-model")
+            -- Other keys preserved
+            test.eq(message.metadata.status, "completed")
+            test.not_nil(message.metadata.tokens)
+        end)
+
+        it("should set metadata on message without existing metadata", function()
+            -- message_id has no metadata (created as plain user message)
+            local result, err = message_repo.update_metadata(test_data.message_id, {
+                custom_key = "custom_value"
+            })
+
+            test.is_nil(err)
+            test.not_nil(result)
+
+            local message, err = message_repo.get(test_data.message_id)
+            test.is_nil(err)
+            test.not_nil(message.metadata)
+            test.eq(message.metadata.custom_key, "custom_value")
+        end)
+
+        it("should handle update_metadata validation errors", function()
+            -- Missing message_id
+            local result, err = message_repo.update_metadata("", { key = "value" })
+            test.is_nil(result)
+            test.contains(tostring(err), "Message ID is required")
+
+            -- Missing metadata
+            result, err = message_repo.update_metadata(test_data.message_id2, nil)
+            test.is_nil(result)
+            test.contains(tostring(err), "Metadata is required")
+
+            -- Non-existent message
+            result, err = message_repo.update_metadata(uuid.v7(), { key = "value" })
+            test.is_nil(result)
+            test.contains(tostring(err), "not found")
         end)
 
         it("should delete a message", function()
             -- First verify we can get the message
             local message, err = message_repo.get(test_data.message_id)
-            expect(err).to_be_nil()
-            expect(message).not_to_be_nil()
+            test.is_nil(err)
+            test.not_nil(message)
 
             -- Now delete it
             local result, err = message_repo.delete(test_data.message_id)
 
-            expect(err).to_be_nil()
-            expect(result).not_to_be_nil()
-            expect(result.deleted).to_be_true()
+            test.is_nil(err)
+            test.not_nil(result)
+            test.is_true(result.deleted)
 
             -- Verify the deletion
             message, err = message_repo.get(test_data.message_id)
-            expect(message).to_be_nil()
+            test.is_nil(message)
             test.contains(tostring(err), "not found")
 
             -- Count should now be 1
             local count, err = message_repo.count_by_session(test_data.session_id)
-            expect(err).to_be_nil()
-            expect(count).to_equal(1)
+            test.is_nil(err)
+            test.eq(count, 1)
         end)
 
         it("should handle validation errors", function()
             -- Missing message_id
             local message, err = message_repo.create(nil, test_data.session_id, "user", "data")
-            expect(message).to_be_nil()
+            test.is_nil(message)
             test.contains(tostring(err), "Message ID is required")
 
             -- Missing session_id
             message, err = message_repo.create(uuid.v7(), "", "user", "data")
-            expect(message).to_be_nil()
+            test.is_nil(message)
             test.contains(tostring(err), "Session ID is required")
 
             -- Missing type
             message, err = message_repo.create(uuid.v7(), test_data.session_id, "", "data")
-            expect(message).to_be_nil()
+            test.is_nil(message)
             test.contains(tostring(err), "Message type is required")
 
             -- Missing data
             message, err = message_repo.create(uuid.v7(), test_data.session_id, "user", nil)
-            expect(message).to_be_nil()
+            test.is_nil(message)
             test.contains(tostring(err), "Message data is required")
 
             -- Non-existent session
             message, err = message_repo.create(uuid.v7(), uuid.v7(), "user", "data")
-            expect(message).to_be_nil()
-            expect(err).not_to_be_nil()
+            test.is_nil(message)
+            test.not_nil(err)
 
             -- Get with invalid ID
             message, err = message_repo.get("")
-            expect(message).to_be_nil()
+            test.is_nil(message)
             test.contains(tostring(err), "Message ID is required")
 
             -- List by invalid session ID
             local messages, err = message_repo.list_by_session("")
-            expect(messages).to_be_nil()
+            test.is_nil(messages)
             test.contains(tostring(err), "Session ID is required")
 
             -- Delete with invalid ID
             local result, err = message_repo.delete("")
-            expect(result).to_be_nil()
+            test.is_nil(result)
             test.contains(tostring(err), "Message ID is required")
         end)
     end)
