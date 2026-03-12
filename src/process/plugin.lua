@@ -1,6 +1,7 @@
 local time = require("time")
 local json = require("json")
 local uuid = require("uuid")
+local funcs = require("funcs")
 local logger = require("logger"):named("relay.session")
 local session_repo = require("session_repo")
 local context_repo = require("context_repo")
@@ -566,6 +567,20 @@ local function run(args)
                                 target_status = target_status,
                                 error = status_err
                             })
+                        end
+
+                        -- Invoke on_session_end hook if configured (non-blocking)
+                        if state.base_config.on_session_end_func_id and state.base_config.on_session_end_func_id ~= "" then
+                            local hook_func_id = state.base_config.on_session_end_func_id
+                            local hook_params = {
+                                session_id = session_id,
+                                user_id = state.user_id,
+                                status = target_status,
+                                reason = err,
+                            }
+                            coroutine.spawn(function()
+                                funcs.call(hook_func_id, hook_params)
+                            end)
                         end
 
                         state.active_sessions[session_id] = nil

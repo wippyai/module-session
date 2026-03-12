@@ -11,6 +11,7 @@ type SessionConfig = {
     session_security_scope: string?,
     gc_interval: string?,
     delegation_func_id: string?,
+    on_session_end_func_id: string?,
     encryption_key: string?,
     enable_agent_cache: boolean?,
     delegation_description_suffix: string?,
@@ -28,6 +29,7 @@ local consts = {
         SESSION_SECURITY_SCOPE = "wippy.session.env:session_security_scope",
         GC_INTERVAL = "wippy.session.env:gc_interval",
         DELEGATION_FUNC_ID = "wippy.session.env:delegation_func_id",
+        ON_SESSION_END_FUNC_ID = "wippy.session.env:on_session_end_func_id",
         ENCRYPTION_KEY = "ENCRYPTION_KEY"
     },
 
@@ -321,6 +323,7 @@ function consts.get_config()
     local session_security_scope, _ = env.get(consts.ENV_IDS.SESSION_SECURITY_SCOPE)
     local gc_interval, _ = env.get(consts.ENV_IDS.GC_INTERVAL)
     local delegation_func_id, _ = env.get(consts.ENV_IDS.DELEGATION_FUNC_ID)
+    local on_session_end_func_id, _ = env.get(consts.ENV_IDS.ON_SESSION_END_FUNC_ID)
     local encryption_key, _ = env.get(consts.ENV_IDS.ENCRYPTION_KEY)
 
     return {
@@ -334,6 +337,7 @@ function consts.get_config()
         session_security_scope = session_security_scope,
         gc_interval = gc_interval,
         delegation_func_id = delegation_func_id,
+        on_session_end_func_id = on_session_end_func_id,
         encryption_key = encryption_key,
 
         -- Internal constants

@@ -103,6 +103,7 @@ entries:
       - json
       - uuid
       - logger
+      - funcs
     imports:
       consts: wippy.session:consts
       session_repo: wippy.session.persist:session_repo

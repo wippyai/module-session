@@ -130,6 +130,14 @@ entries:
       - entry: wippy.session.env:delegation_func_id
         path: ".default"
 
+  - name: on_session_end_func_id
+    kind: ns.requirement
+    meta:
+      description: "Function ID called when a session ends (runs in the plugin actor context)"
+    targets:
+      - entry: wippy.session.env:on_session_end_func_id
+        path: ".default"
+
   # wippy.session:consts
   - name: consts
     kind: library.lua
