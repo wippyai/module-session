@@ -138,6 +138,32 @@ entries:
       - entry: wippy.session.env:on_session_end_func_id
         path: ".default"
 
+  - name: env_storage
+    kind: ns.requirement
+    meta:
+      description: "Storage backend for session environment variables"
+    targets:
+      - entry: wippy.session.env:database_resource
+        path: ".storage"
+      - entry: wippy.session.env:token_checkpoint_threshold
+        path: ".storage"
+      - entry: wippy.session.env:max_message_limit
+        path: ".storage"
+      - entry: wippy.session.env:checkpoint_function_id
+        path: ".storage"
+      - entry: wippy.session.env:title_function_id
+        path: ".storage"
+      - entry: wippy.session.env:default_host
+        path: ".storage"
+      - entry: wippy.session.env:session_security_scope
+        path: ".storage"
+      - entry: wippy.session.env:gc_interval
+        path: ".storage"
+      - entry: wippy.session.env:delegation_func_id
+        path: ".storage"
+      - entry: wippy.session.env:on_session_end_func_id
+        path: ".storage"
+
   # wippy.session:consts
   - name: consts
     kind: library.lua
