@@ -37,7 +37,7 @@ function prompt_builder.build(messages, contexts, session_meta, options)
     end
 
     for i, msg in ipairs(messages) do
-        local metadata = msg.metadata or {}
+        local metadata: table = msg.metadata or {}
 
         if msg.type == consts.MSG_TYPE.SYSTEM then
             -- for internal use only, use developer role for ongoing system messages
@@ -83,7 +83,8 @@ function prompt_builder.build(messages, contexts, session_meta, options)
             or msg.type == consts.MSG_TYPE.PRIVATE_FUNCTION
             or msg.type == consts.MSG_TYPE.DELEGATION
         then
-            if metadata.function_name and metadata.status then
+            local func_name = tostring(metadata.function_name)
+            if func_name ~= "" and metadata.status then
                 local args = msg.data
                 if type(args) == "string" then
                     local parsed, parse_err = json.decode(args)
@@ -92,15 +93,15 @@ function prompt_builder.build(messages, contexts, session_meta, options)
                     end
                 end
 
-                local llm_call_id = metadata.call_id or msg.message_id
+                local llm_call_id = tostring(metadata.call_id or msg.message_id)
                 local opts: {provider_metadata: table?}? = nil
                 if type(metadata.provider_metadata) == "table" then
                     opts = { provider_metadata = metadata.provider_metadata }
                 end
-                builder:add_function_call(metadata.function_name, args :: string, llm_call_id :: string, opts)
+                builder:add_function_call(func_name, args :: string, llm_call_id, opts)
 
                 if metadata.status == consts.FUNC_STATUS.PENDING then
-                    builder:add_function_result(metadata.function_name, "incomplete", llm_call_id :: string)
+                    builder:add_function_result(func_name, "incomplete", llm_call_id)
                 elseif metadata.status == consts.FUNC_STATUS.SUCCESS or
                     metadata.status == consts.FUNC_STATUS.ERROR then
                     local result_content = metadata.result
@@ -111,7 +112,7 @@ function prompt_builder.build(messages, contexts, session_meta, options)
                     else
                         result_content = tostring(result_content)
                     end
-                    builder:add_function_result(metadata.function_name, result_content, llm_call_id :: string)
+                    builder:add_function_result(func_name, tostring(result_content), llm_call_id)
                 end
             end
         elseif msg.type == consts.MSG_TYPE.ARTIFACT then

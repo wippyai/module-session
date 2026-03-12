@@ -42,10 +42,11 @@ local function run(args)
     local session_upstream = upstream.new(args.session_id, args.conn_pid, args.parent_pid)
 
     -- Initialize agent context using session config
-    local agent_ctx = agent_context.new({
-        enable_cache = session_data.config.enable_agent_cache,
-        context = {}
-    } :: any)
+    local agent_opts = {
+        enable_cache = session_data.config.enable_agent_cache == true,
+        context = {} :: {[string]: any},
+    }
+    local agent_ctx = agent_context.new(agent_opts)
 
     -- Configure delegation if enabled
     if session_data.config.delegation_func_id then
