@@ -48,6 +48,8 @@ entries:
         value: app:db
       - name: api_router
         value: app:api.public
+      - name: env_storage
+        value: app:env_storage
 
   - name: dep.wippy.llm
     kind: ns.dependency

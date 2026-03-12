@@ -9,7 +9,7 @@ entries:
       comment: Function ID for generating checkpoint summaries (checkpoints enabled when set)
       icon: tabler:summary
       private: true
-    storage: app.env:router
+
     variable: SESSION_CHECKPOINT_FUNCTION_ID
 
   # wippy.session.env:database_resource
@@ -19,7 +19,7 @@ entries:
       comment: Database resource for session storage
       icon: tabler:database
       private: true
-    storage: app.env:router
+
     variable: SESSION_DATABASE_RESOURCE
 
   # wippy.session.env:default_host
@@ -29,7 +29,7 @@ entries:
       comment: Default host for session processes
       icon: tabler:server
       private: true
-    storage: app.env:router
+
     variable: SESSION_DEFAULT_HOST
 
   # wippy.session.env:delegation_func_id
@@ -39,7 +39,7 @@ entries:
       comment: Function ID for delegation calls (delegation enabled when set)
       icon: tabler:function
       private: true
-    storage: app.env:router
+
     variable: SESSION_DELEGATION_FUNC_ID
 
   # wippy.session.env:gc_interval
@@ -49,7 +49,7 @@ entries:
       comment: Garbage collection interval for session cleanup
       icon: tabler:clock
       private: true
-    storage: app.env:router
+
     variable: SESSION_GC_INTERVAL
 
   # wippy.session.env:max_message_limit
@@ -59,7 +59,7 @@ entries:
       comment: Maximum messages to load for prompt building
       icon: tabler:list
       private: true
-    storage: app.env:router
+
     variable: SESSION_MAX_MESSAGE_LIMIT
 
   # wippy.session.env:session_security_scope
@@ -69,7 +69,7 @@ entries:
       comment: Security scope for session processes
       icon: tabler:shield
       private: true
-    storage: app.env:router
+
     variable: SESSION_SECURITY_SCOPE
 
   # wippy.session.env:title_function_id
@@ -79,7 +79,7 @@ entries:
       comment: Function ID for generating session titles (automatic titles enabled when set)
       icon: tabler:heading
       private: true
-    storage: app.env:router
+
     variable: SESSION_TITLE_FUNCTION_ID
 
   # wippy.session.env:on_session_end_func_id
@@ -89,7 +89,7 @@ entries:
       comment: Function ID called when a session ends
       icon: tabler:function
       private: true
-    storage: app.env:router
+
     variable: SESSION_ON_SESSION_END_FUNC_ID
 
   # wippy.session.env:token_checkpoint_threshold
@@ -99,5 +99,5 @@ entries:
       comment: Token count threshold for creating conversation checkpoints
       icon: tabler:checkpoint
       private: true
-    storage: app.env:router
+
     variable: SESSION_TOKEN_CHECKPOINT_THRESHOLD

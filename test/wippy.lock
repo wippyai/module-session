@@ -1,6 +1,9 @@
 directories:
     modules: .wippy
     src: .
+replacements:
+    - from: wippy/session
+      to: ../src
 modules:
     - name: wippy/agent
       version: 0.4.5
@@ -9,14 +12,14 @@ modules:
       version: 0.3.12
       hash: 2b6d8eba7b46ef900024d3a7dbf06bd560fad645b8b2ac6296e2a8bad42f60b9
     - name: wippy/llm
-      version: 0.4.11
-      hash: 1d09c98a83b2536421d27783c0873c082a04def19c6543e596021cc00a998910
+      version: 0.4.15
+      hash: 590d6f0ac9e4de1c2c549cf8c5e33f886a5113fb2ed3281791d1486e99293508
     - name: wippy/migration
       version: 0.3.15
       hash: b675a9dd0bf83a48ecb696cc27ec7a9173e54c3431da89121d865751e26330d0
     - name: wippy/session
-      version: 0.1.3
-      hash: a35ff125df5aa37f34de70f9d2508a61079eaf3f76f028da3724854b3e39bf48
+      version: 0.1.8
+      hash: 7ece25b42b0f0709d9cd945636ffdadf56a025d865ca01e2c1a66fc38edc374f
     - name: wippy/terminal
       version: 0.4.2
       hash: 34b99aac2eba9c5016fd02c783117fb2b0381ce14696c7b199265458b99a3271
@@ -26,8 +29,3 @@ modules:
     - name: wippy/views
       version: 0.4.25
       hash: c5d409424e328cf26cd5ba7394829888642dd809d0a7e2c0ffce41291c927751
-replacements:
-    - from: wippy/session
-      to: ../src
-options:
-    unpack_modules: true
