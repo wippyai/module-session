@@ -82,6 +82,16 @@ entries:
     storage: app.env:router
     variable: SESSION_TITLE_FUNCTION_ID
 
+  # wippy.session.env:on_session_end_func_id
+  - name: on_session_end_func_id
+    kind: env.variable
+    meta:
+      comment: Function ID called when a session ends
+      icon: tabler:function
+      private: true
+    storage: app.env:router
+    variable: SESSION_ON_SESSION_END_FUNC_ID
+
   # wippy.session.env:token_checkpoint_threshold
   - name: token_checkpoint_threshold
     kind: env.variable
