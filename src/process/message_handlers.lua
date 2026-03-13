@@ -3,6 +3,7 @@ local uuid = require("uuid")
 local consts = require("consts")
 local prompt_builder = require("prompt_builder")
 local tool_caller = require("tool_caller")
+local output = require("output")
 
 type SessionContext = {
     session_id: string,
@@ -100,6 +101,42 @@ function message_handlers.agent_step(ctx, op)
         end
 
         ctx.writer:update_meta({ meta = current_meta })
+    end
+
+    if result.truncated then
+        if result.result and result.result ~= "" then
+            local _, store_err = ctx.writer:add_message(consts.MSG_TYPE.ASSISTANT, result.result, {
+                source_id = op.message_id,
+                agent_id = ctx.config.agent_id,
+                model = ctx.config.model,
+                tokens = result.tokens,
+                truncated = true
+            })
+            if store_err then
+                return nil, store_err
+            end
+
+            ctx.upstream:send_message_update(response_id, consts.UPSTREAM_TYPES.CONTENT, {
+                content = result.result,
+                using_tools = false
+            })
+        end
+
+        ctx.writer:add_message(consts.MSG_TYPE.DEVELOPER, output.TRUNCATION_MSG, {})
+
+        return {
+            message_id = op.message_id,
+            response_id = response_id,
+            completed = false,
+            next_ops = {
+                {
+                    type = consts.OP_TYPE.AGENT_STEP,
+                    message_id = op.message_id,
+                    request_id = op.request_id,
+                    from_user = false
+                }
+            }
+        }
     end
 
     local unified_tool_calls = {}

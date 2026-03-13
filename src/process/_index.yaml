@@ -64,6 +64,7 @@ entries:
       agent_context: wippy.agent:context
       prompt_builder: wippy.session:prompt_builder
       tool_caller: wippy.agent.tools:caller
+      output: wippy.llm:output
 
   # wippy.session.process:session
   - name: session
