@@ -14,9 +14,9 @@ type CheckpointResult = {
 }
 
 local CONFIG = {
-    model = "gpt-4o-mini",
+    model = "class:fast",
     temperature = 0.2,
-    max_tokens = 3000,  -- USE IT ALL
+    max_tokens = 3000,
     max_tool_result_chars = 2000
 }
 

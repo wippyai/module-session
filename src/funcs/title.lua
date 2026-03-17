@@ -13,7 +13,7 @@ type TitleResult = {
 }
 
 local CONFIG = {
-    model = "gpt-4o-mini",
+    model = "class:fast",
     temperature = 0.1,
     max_tokens = 50,
     max_prior_checkpoints = 5,
