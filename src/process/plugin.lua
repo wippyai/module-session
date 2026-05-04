@@ -364,14 +364,15 @@ local function run(args)
                 "Session ID is required for closing a session", request_id)
             return
         end
+        local checked_session_id: string = session_id
 
-        local session_info = state.active_sessions[session_id]
+        local session_info = state.active_sessions[checked_session_id]
         if session_info then
             if state.session_count > 1 then
-                graceful_terminate_session(session_id, session_info, "user_closed")
-                logger:info("session close requested", { user_id = state.user_id, session_id = session_id })
+                graceful_terminate_session(checked_session_id, session_info, "user_closed")
+                logger:info("session close requested", { user_id = state.user_id, session_id = checked_session_id })
             else
-                logger:debug("keeping last session active", { user_id = state.user_id, session_id = session_id })
+                logger:debug("keeping last session active", { user_id = state.user_id, session_id = checked_session_id })
             end
         else
             send_error(conn_pid, consts.ERROR_CODES.SESSION_NOT_FOUND,
