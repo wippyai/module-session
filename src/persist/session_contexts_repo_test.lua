@@ -7,6 +7,7 @@ local context_repo = require("context_repo")
 local time = require("time")
 local security = require("security")
 local consts = require("consts")
+local wait_for_boot = require("wait_for_boot")
 
 local function define_tests()
     describe("Session Contexts Repository", function()
@@ -25,6 +26,8 @@ local function define_tests()
 
         -- Setup test environment before all tests
         before_all(function()
+            wait_for_boot.run()
+
             -- Create a test context
             local context, err = context_repo.create(
                 test_data.context_id,
@@ -173,6 +176,8 @@ local function define_tests()
 
             -- Verify the update
             local context, err = session_contexts_repo.get(test_data.context1_id)
+            test.is_nil(err)
+            test.not_nil(context)
             test.eq(context.text, "Updated note text")
         end)
 

@@ -2,6 +2,21 @@ version: "1.0"
 namespace: app
 
 entries:
+  - name: wait_for_boot
+    kind: function.lua
+    meta:
+      type: test
+      suite: "00_setup"
+      comment: Runs bootloaders and waits for session tables before tests run
+    source: file://wait_for_boot.lua
+    modules:
+      - sql
+      - time
+    imports:
+      encryption_key_bootloader: wippy.bootloader.bootloaders:encryption_key
+      migration_bootloader: wippy.migration:migration_bootloader
+    method: run
+
   - name: db
     kind: db.sql.sqlite
     meta:
@@ -9,9 +24,11 @@ entries:
     file: ":memory:"
 
   - name: env_storage
-    kind: env.storage.os
+    kind: env.storage.file
     meta:
       type: envstorage
+    file_path: ./.wippy/test.env
+    auto_create: true
 
   - name: processes
     kind: process.host
@@ -86,7 +103,7 @@ entries:
 
   - name: encryption_key
     kind: env.variable
-    readonly: true
+    readonly: false
     storage: app:env_storage
     default: "046e5a0594bb339ef5ddcd8c3a9b9b828ed066d53ee99138ec6da8795e38b55d"
     variable: ENCRYPTION_KEY

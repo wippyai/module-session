@@ -8,6 +8,7 @@ local context_repo = require("context_repo")
 local time = require("time")
 local security = require("security")
 local consts = require("consts")
+local wait_for_boot = require("wait_for_boot")
 
 -- Insert an artifact directly via SQL (bypasses security.actor() requirement)
 local function insert_artifact(db, artifact_id, session_id, user_id, kind, title, content, meta)
@@ -43,6 +44,8 @@ local function define_tests()
 
         -- Setup test environment before all tests
         before_all(function()
+            wait_for_boot.run()
+
             -- Create a test context
             local context, err = context_repo.create(
                 test_data.context_id,

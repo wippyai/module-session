@@ -122,7 +122,7 @@ function message_handlers.agent_step(ctx, op)
             })
         end
 
-        ctx.writer:add_message(consts.MSG_TYPE.DEVELOPER, output.TRUNCATION_MSG, {})
+        ctx.writer:add_message(consts.MSG_TYPE.DEVELOPER, (output :: any).TRUNCATION_MSG, {})
 
         return {
             message_id = op.message_id,

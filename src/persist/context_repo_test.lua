@@ -4,6 +4,7 @@ local uuid = require("uuid")
 local context_repo = require("context_repo")
 local time = require("time")
 local consts = require("consts")
+local wait_for_boot = require("wait_for_boot")
 
 local function define_tests()
     describe("Context Repository", function()
@@ -12,6 +13,10 @@ local function define_tests()
             context_id = uuid.v7(),
             context_id2 = uuid.v7()
         }
+
+        before_all(function()
+            wait_for_boot.run()
+        end)
 
         -- Clean up test data after all tests
         after_all(function()
@@ -133,6 +138,8 @@ local function define_tests()
 
             -- Verify the update by getting the context
             local context, err = context_repo.get(test_data.context_id)
+            test.is_nil(err)
+            test.not_nil(context)
             test.eq(context.data, "Updated context data")
         end)
 

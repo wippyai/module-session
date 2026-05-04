@@ -1,9 +1,14 @@
 local test = require("test")
 local start_tokens = require("start_tokens")
 local base64 = require("base64")
+local wait_for_boot = require("wait_for_boot")
 
 local function define_tests()
     describe("Start Tokens", function()
+        before_all(function()
+            wait_for_boot.run()
+        end)
+
         it("should create and unpack valid token", function()
             local params = {
                 agent = "test_agent",

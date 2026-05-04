@@ -51,6 +51,7 @@ entries:
       artifact_repo: wippy.session.persist:artifact_repo
       context_repo: wippy.session.persist:context_repo
       session_repo: wippy.session.persist:session_repo
+      wait_for_boot: app:wait_for_boot
       test: wippy.test:test
       consts: wippy.session:consts
     method: run
@@ -82,6 +83,7 @@ entries:
       - security
     imports:
       context_repo: wippy.session.persist:context_repo
+      wait_for_boot: app:wait_for_boot
       test: wippy.test:test
       consts: wippy.session:consts
     method: run
@@ -117,6 +119,7 @@ entries:
       context_repo: wippy.session.persist:context_repo
       message_repo: wippy.session.persist:message_repo
       session_repo: wippy.session.persist:session_repo
+      wait_for_boot: app:wait_for_boot
       test: wippy.test:test
       consts: wippy.session:consts
     method: run
@@ -151,6 +154,7 @@ entries:
       context_repo: wippy.session.persist:context_repo
       session_contexts_repo: wippy.session.persist:session_contexts_repo
       session_repo: wippy.session.persist:session_repo
+      wait_for_boot: app:wait_for_boot
       test: wippy.test:test
       consts: wippy.session:consts
     method: run
@@ -184,6 +188,7 @@ entries:
     imports:
       context_repo: wippy.session.persist:context_repo
       session_repo: wippy.session.persist:session_repo
+      wait_for_boot: app:wait_for_boot
       test: wippy.test:test
       consts: wippy.session:consts
     method: run

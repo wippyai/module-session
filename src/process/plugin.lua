@@ -16,8 +16,8 @@ type PluginArgs = {
 
 type ActiveSession = {
     pid: any,
-    created_at: any,
-    last_activity: any,
+    created_at: time.Time,
+    last_activity: time.Time?,
     terminating: boolean,
     terminate_reason: string?,
 }
@@ -34,7 +34,7 @@ local function run(args)
         user_metadata = args.user_metadata or {},
         user_hub_pid = args.user_hub_pid,
         base_config = base_config,
-        active_sessions = {},
+        active_sessions = {} :: {[string]: ActiveSession},
         session_count = 0,
         shutting_down = false
     }
@@ -69,7 +69,7 @@ local function run(args)
         end
     end
 
-    local function graceful_terminate_session(session_id, session_info, reason)
+    local function graceful_terminate_session(session_id: string, session_info: ActiveSession?, reason: string)
         if not session_info or not session_info.pid then
             return
         end
@@ -359,7 +359,7 @@ local function run(args)
         local session_id = payload_data.session_id
         local request_id = payload_data.request_id
 
-        if not session_id then
+        if type(session_id) ~= "string" or session_id == "" then
             send_error(conn_pid, consts.ERROR_CODES.INVALID_SESSION_ID,
                 "Session ID is required for closing a session", request_id)
             return
@@ -477,7 +477,7 @@ local function run(args)
         local to_remove = {}
 
         for session_id, session_info in pairs(state.active_sessions) do
-            local last_activity = session_info.last_activity or session_info.created_at
+            local last_activity: time.Time = session_info.last_activity or session_info.created_at
             local time_since_activity = now:sub(last_activity)
 
             if time_since_activity:seconds() > inactivity_duration:seconds() then
