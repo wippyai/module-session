@@ -138,6 +138,29 @@ entries:
     func: list_sessions
     path: /sessions
 
+  # wippy.session.api:rename_session
+  - name: rename_session
+    kind: function.lua
+    meta:
+      comment: Rename a user session
+    source: file://rename_session.lua
+    modules:
+      - http
+      - security
+    imports:
+      session_writer: wippy.session.persist:writer
+    method: handler
+
+  # wippy.session.api:rename_session.endpoint
+  - name: rename_session.endpoint
+    kind: http.endpoint
+    meta:
+      comment: Rename session endpoint
+      router: app:api
+    method: POST
+    func: rename_session
+    path: /sessions/rename
+
   # wippy.session.api:session_messages
   - name: session_messages
     kind: function.lua
