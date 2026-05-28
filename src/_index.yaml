@@ -133,7 +133,8 @@ entries:
   - name: on_session_end_func_id
     kind: ns.requirement
     meta:
-      description: "Function ID called when a session ends (runs in the plugin actor context)"
+      description: "Function ID called when a session ends (runs in the plugin actor context). Optional; empty disables the hook."
+    default: ""
     targets:
       - entry: wippy.session.env:on_session_end_func_id
         path: ".default"
